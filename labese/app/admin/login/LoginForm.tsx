@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, startTransition } from "react";
+import { useActionState, startTransition, useEffect } from "react";
 import { loginAction } from "@/app/actions/admin";
 import { ShieldCheck, Loader2, AlertCircle } from "lucide-react";
 
@@ -9,8 +9,13 @@ export default function LoginForm() {
     status: "idle",
   });
 
-  // No need for useEffect redirect - server action handles it
-  // useEffect removed
+  // Use full page redirect to ensure cookies are sent
+  useEffect(() => {
+    if (state.status === "success") {
+      // Full page reload ensures cookies are included
+      window.location.href = "/admin";
+    }
+  }, [state.status]);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

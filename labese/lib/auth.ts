@@ -35,10 +35,10 @@ export async function setAdminSession() {
     name: SESSION_COOKIE_NAME,
     value: token,
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: true, // Always true for production
     sameSite: "lax",
     path: "/",
-    maxAge: SESSION_EXPIRY_SECONDS, // 5 minutes
+    maxAge: SESSION_EXPIRY_SECONDS,
   });
 }
 

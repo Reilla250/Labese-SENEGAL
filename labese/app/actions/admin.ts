@@ -49,8 +49,10 @@ export async function loginAction(
 
   if (emailInput === emailEnv && passwordInput === passwordEnv) {
     await setAdminSession();
-    // Server-side redirect after session is set
-    redirect("/admin");
+    
+    // Instead of redirecting here, return success
+    // The client will handle redirect after cookies are set
+    return { status: "success" };
   }
 
   return {
