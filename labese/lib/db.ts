@@ -1,5 +1,4 @@
-import fs from "fs/promises";
-import path from "path";
+import { kv } from "@vercel/kv";
 
 // Default static values to fall back on if no custom database values exist yet
 import { site as defaultSite } from "@/data/site";
@@ -21,30 +20,24 @@ import {
   waysToPartner as defaultWaysToPartner,
 } from "@/data/advocacy";
 
-const DB_DIR = path.join(process.cwd(), "data", "db");
-
-async function ensureDbDir() {
-  try {
-    await fs.mkdir(DB_DIR, { recursive: true });
-  } catch (e) {
-    // Already exists or can't be created
-  }
-}
-
+// Helper functions for Vercel KV storage
 async function readJsonDb<T>(key: string, defaultValue: T): Promise<T> {
-  const filePath = path.join(DB_DIR, `${key}.json`);
   try {
-    const content = await fs.readFile(filePath, "utf-8");
-    return JSON.parse(content) as T;
+    const data = await kv.get<T>(`labese:${key}`);
+    return data ?? defaultValue;
   } catch (e) {
+    // If KV is not configured (local dev), return default
     return defaultValue;
   }
 }
 
 async function writeJsonDb<T>(key: string, data: T): Promise<void> {
-  await ensureDbDir();
-  const filePath = path.join(DB_DIR, `${key}.json`);
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
+  try {
+    await kv.set(`labese:${key}`, data);
+  } catch (e) {
+    console.error("Failed to write to KV:", e);
+    throw new Error("Database write failed");
+  }
 }
 
 // 1. Site Metadata

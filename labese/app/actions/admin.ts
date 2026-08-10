@@ -1,7 +1,6 @@
 "use server";
 
-import fs from "fs/promises";
-import path from "path";
+import { put, del, list } from "@vercel/blob";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { isAuthenticated, setAdminSession, logout } from "@/lib/auth";
@@ -139,37 +138,30 @@ export async function uploadImageAction(formData: FormData) {
   }
 
   try {
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    // Upload to Vercel Blob
+    const blob = await put(file.name, file, {
+      access: "public",
+      addRandomSuffix: true,
+    });
 
-    const uploadDir = path.join(process.cwd(), "public", "uploads");
-    await fs.mkdir(uploadDir, { recursive: true });
-
-    // Sanitize filename to prevent directory traversal or invalid characters
-    const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-    const nameWithTimestamp = `${Date.now()}-${cleanFileName}`;
-    const filePath = path.join(uploadDir, nameWithTimestamp);
-
-    await fs.writeFile(filePath, buffer);
     revalidatePath("/admin/images");
     return {
       success: true,
-      image: { name: nameWithTimestamp, url: `/uploads/${nameWithTimestamp}`, size: file.size },
+      image: { name: blob.pathname, url: blob.url, size: file.size },
       error: null,
     };
   } catch (e) {
     console.error("Image upload failed:", e);
-    return { success: false, error: "An error occurred during file writing.", image: null };
+    return { success: false, error: "An error occurred during file upload.", image: null };
   }
 }
 
 // 11. Delete image Action
 export async function deleteImageAction(formData: FormData) {
   await requireAuth();
-  const filename = String(formData.get("filename") ?? "");
+  const url = String(formData.get("url") ?? "");
   try {
-    const filePath = path.join(process.cwd(), "public", "uploads", path.basename(filename));
-    await fs.unlink(filePath);
+    await del(url);
     revalidatePath("/admin/images");
     return { success: true, error: null };
   } catch (e) {
@@ -181,24 +173,16 @@ export async function deleteImageAction(formData: FormData) {
 // 12. Get uploaded images list
 export async function getUploadedImagesAction() {
   await requireAuth();
-  const uploadDir = path.join(process.cwd(), "public", "uploads");
   try {
-    const files = await fs.readdir(uploadDir);
-    // Sort files to return newer uploads first
-    const list = await Promise.all(
-      files.map(async (name) => {
-        const filePath = path.join(uploadDir, name);
-        const stats = await fs.stat(filePath);
-        return {
-          name,
-          url: `/uploads/${name}`,
-          size: stats.size,
-          mtime: stats.mtimeMs,
-        };
-      })
-    );
-    return list.sort((a, b) => b.mtime - a.mtime);
+    const { blobs } = await list();
+    return blobs.map((blob) => ({
+      name: blob.pathname,
+      url: blob.url,
+      size: blob.size,
+      mtime: new Date(blob.uploadedAt).getTime(),
+    })).sort((a, b) => b.mtime - a.mtime);
   } catch (e) {
+    console.error("Failed to list images:", e);
     return [];
   }
 }
