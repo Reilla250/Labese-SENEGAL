@@ -6,9 +6,11 @@ import { Upload, Copy, Trash2, Check, ImageIcon } from "lucide-react";
 import Image from "next/image";
 
 interface ImageFile {
+  id: string;
   name: string;
   url: string;
   size: number;
+  metadata?: any;
 }
 
 interface ImageLibraryClientProps {
@@ -34,7 +36,15 @@ export default function ImageLibraryClient({ initialImages }: ImageLibraryClient
       try {
         const res = await uploadImageAction(formData);
         if (res.success && res.image) {
-          setImages((prev) => [res.image!, ...prev]);
+          setImages((prev) => [
+            {
+              id: res.image!.id || res.image!.name,
+              name: res.image!.name,
+              url: res.image!.url,
+              size: res.image!.size,
+            },
+            ...prev
+          ]);
         } else {
           setError(res.error ?? "Upload failed");
         }
@@ -47,13 +57,14 @@ export default function ImageLibraryClient({ initialImages }: ImageLibraryClient
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleDelete = async (name: string, url: string) => {
+  const handleDelete = async (id: string, name: string, url: string) => {
     if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
     const formData = new FormData();
     formData.append("url", url);
+    formData.append("id", id);
     const res = await deleteImageAction(formData);
     if (res.success) {
-      setImages((prev) => prev.filter((img) => img.url !== url));
+      setImages((prev) => prev.filter((img) => img.id !== id));
     } else {
       setError(res.error ?? "Failed to delete image.");
     }
@@ -163,7 +174,7 @@ export default function ImageLibraryClient({ initialImages }: ImageLibraryClient
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDelete(img.name, img.url)}
+                    onClick={() => handleDelete(img.id, img.name, img.url)}
                     title="Delete image"
                     className="h-9 w-9 rounded-full bg-white flex items-center justify-center text-rose-500 hover:bg-rose-500 hover:text-white transition-colors"
                   >

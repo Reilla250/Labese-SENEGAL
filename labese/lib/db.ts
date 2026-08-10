@@ -1,4 +1,4 @@
-import { kv } from "@vercel/kv";
+import { put, head } from "@vercel/blob";
 
 // Default static values to fall back on if no custom database values exist yet
 import { site as defaultSite } from "@/data/site";
@@ -20,22 +20,53 @@ import {
   waysToPartner as defaultWaysToPartner,
 } from "@/data/advocacy";
 
-// Helper functions for Vercel KV storage
+/**
+ * Helper functions for using Vercel Blob as a Key-Value store
+ * All data is stored as private JSON files in the /data/ folder
+ */
 async function readJsonDb<T>(key: string, defaultValue: T): Promise<T> {
   try {
-    const data = await kv.get<T>(`labese:${key}`);
-    return data ?? defaultValue;
+    // Construct the blob path for this data collection
+    const blobPath = `data/${key}.json`;
+    
+    // Try to fetch the JSON file from Vercel Blob
+    const response = await fetch(
+      `https://${process.env.BLOB_READ_WRITE_TOKEN?.split('_')[1]}.public.blob.vercel-storage.com/${blobPath}`,
+      {
+        headers: {
+          authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`,
+        },
+      }
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      return data as T;
+    }
+    
+    // If file doesn't exist, return default
+    return defaultValue;
   } catch (e) {
-    // If KV is not configured (local dev), return default
+    // If Blob is not configured or any error, return default
+    console.log(`Using default data for ${key}:`, e);
     return defaultValue;
   }
 }
 
 async function writeJsonDb<T>(key: string, data: T): Promise<void> {
   try {
-    await kv.set(`labese:${key}`, data);
+    const blobPath = `data/${key}.json`;
+    const jsonBlob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
+
+    await put(blobPath, jsonBlob, {
+      access: "public", // Public so we can read it with auth
+      addRandomSuffix: false, // Keep consistent filename
+      contentType: "application/json",
+    });
   } catch (e) {
-    console.error("Failed to write to KV:", e);
+    console.error("Failed to write to Blob storage:", e);
     throw new Error("Database write failed");
   }
 }

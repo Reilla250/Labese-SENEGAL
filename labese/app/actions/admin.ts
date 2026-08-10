@@ -129,7 +129,7 @@ export async function saveAdvocacyAction(data: Parameters<typeof db.saveAdvocacy
   return { success: true };
 }
 
-// 10. Image upload Action
+// 10. Image upload Action with metadata
 export async function uploadImageAction(formData: FormData) {
   await requireAuth();
   const file = formData.get("file") as File;
@@ -138,16 +138,47 @@ export async function uploadImageAction(formData: FormData) {
   }
 
   try {
-    // Upload to Vercel Blob
-    const blob = await put(file.name, file, {
+    const imageId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    const ext = file.name.split(".").pop() || "jpg";
+    
+    // Upload image to Blob (public, in /images/ folder)
+    const imageBlob = await put(`images/${imageId}.${ext}`, file, {
       access: "public",
-      addRandomSuffix: true,
+      addRandomSuffix: false,
+    });
+
+    // Create metadata object
+    const metadata = {
+      id: imageId,
+      name: file.name,
+      originalName: file.name,
+      size: file.size,
+      type: file.type,
+      uploadedAt: new Date().toISOString(),
+      imageUrl: imageBlob.url,
+      pathname: imageBlob.pathname,
+    };
+
+    // Store metadata as JSON in Blob (in /metadata/ folder)
+    const metadataBlob = new Blob([JSON.stringify(metadata, null, 2)], {
+      type: "application/json",
+    });
+    
+    await put(`metadata/${imageId}.json`, metadataBlob, {
+      access: "public",
+      addRandomSuffix: false,
+      contentType: "application/json",
     });
 
     revalidatePath("/admin/images");
     return {
       success: true,
-      image: { name: blob.pathname, url: blob.url, size: file.size },
+      image: {
+        id: imageId,
+        name: file.name,
+        url: imageBlob.url,
+        size: file.size,
+      },
       error: null,
     };
   } catch (e) {
@@ -156,12 +187,25 @@ export async function uploadImageAction(formData: FormData) {
   }
 }
 
-// 11. Delete image Action
+// 11. Delete image Action (deletes both image and metadata)
 export async function deleteImageAction(formData: FormData) {
   await requireAuth();
   const url = String(formData.get("url") ?? "");
+  const imageId = String(formData.get("id") ?? "");
+  
   try {
+    // Delete image
     await del(url);
+    
+    // Delete metadata JSON
+    if (imageId) {
+      try {
+        await del(`metadata/${imageId}.json`);
+      } catch (e) {
+        console.log("Metadata file may not exist:", e);
+      }
+    }
+    
     revalidatePath("/admin/images");
     return { success: true, error: null };
   } catch (e) {
@@ -174,13 +218,38 @@ export async function deleteImageAction(formData: FormData) {
 export async function getUploadedImagesAction() {
   await requireAuth();
   try {
-    const { blobs } = await list();
-    return blobs.map((blob) => ({
-      name: blob.pathname,
-      url: blob.url,
-      size: blob.size,
-      mtime: new Date(blob.uploadedAt).getTime(),
-    })).sort((a, b) => b.mtime - a.mtime);
+    const { blobs } = await list({ prefix: "images/" });
+    
+    // Fetch metadata for each image
+    const imagesWithMetadata = await Promise.all(
+      blobs.map(async (blob) => {
+        const imageId = blob.pathname.split("/")[1]?.split(".")[0];
+        let metadata = null;
+        
+        try {
+          // Try to fetch metadata JSON
+          const metadataResponse = await fetch(
+            blob.url.replace(`images/${blob.pathname.split("/")[1]}`, `metadata/${imageId}.json`)
+          );
+          if (metadataResponse.ok) {
+            metadata = await metadataResponse.json();
+          }
+        } catch (e) {
+          console.log("No metadata found for:", imageId);
+        }
+
+        return {
+          id: imageId || blob.pathname,
+          name: metadata?.originalName || blob.pathname.split("/").pop() || "unknown",
+          url: blob.url,
+          size: blob.size,
+          mtime: new Date(blob.uploadedAt).getTime(),
+          metadata,
+        };
+      })
+    );
+    
+    return imagesWithMetadata.sort((a, b) => b.mtime - a.mtime);
   } catch (e) {
     console.error("Failed to list images:", e);
     return [];
