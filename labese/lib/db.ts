@@ -1,4 +1,4 @@
-import { put, head } from "@vercel/blob";
+import { put, list } from "@vercel/blob";
 
 // Default static values to fall back on if no custom database values exist yet
 import { site as defaultSite } from "@/data/site";
@@ -25,29 +25,28 @@ import {
  * All data is stored as private JSON files in the /data/ folder
  */
 async function readJsonDb<T>(key: string, defaultValue: T): Promise<T> {
-  try {
-    // Construct the blob path for this data collection
-    const blobPath = `data/${key}.json`;
-    
-    // Try to fetch the JSON file from Vercel Blob
-    const response = await fetch(
-      `https://${process.env.BLOB_READ_WRITE_TOKEN?.split('_')[1]}.public.blob.vercel-storage.com/${blobPath}`,
-      {
-        headers: {
-          authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`,
-        },
-      }
-    );
+  // If no Blob token configured (e.g., during build), use defaults
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    return defaultValue;
+  }
 
-    if (response.ok) {
-      const data = await response.json();
-      return data as T;
+  try {
+    // List blobs to find our data file
+    const { blobs } = await list({ prefix: `data/${key}.json`, limit: 1 });
+    
+    if (blobs.length > 0) {
+      // Fetch the JSON data from the blob URL
+      const response = await fetch(blobs[0].url);
+      if (response.ok) {
+        const data = await response.json();
+        return data as T;
+      }
     }
     
     // If file doesn't exist, return default
     return defaultValue;
   } catch (e) {
-    // If Blob is not configured or any error, return default
+    // If any error, return default
     console.log(`Using default data for ${key}:`, e);
     return defaultValue;
   }
@@ -59,6 +58,17 @@ async function writeJsonDb<T>(key: string, data: T): Promise<void> {
     const jsonBlob = new Blob([JSON.stringify(data, null, 2)], {
       type: "application/json",
     });
+
+    await put(blobPath, jsonBlob, {
+      access: "public",
+      addRandomSuffix: false,
+      contentType: "application/json",
+    });
+  } catch (e) {
+    console.error("Failed to write to Blob storage:", e);
+    throw new Error("Database write failed");
+  }
+}
 
     await put(blobPath, jsonBlob, {
       access: "public", // Public so we can read it with auth
