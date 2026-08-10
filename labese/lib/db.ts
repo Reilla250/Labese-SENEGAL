@@ -56,29 +56,33 @@ async function readJsonDb<T>(key: string, defaultValue: T): Promise<T> {
 }
 
 async function writeJsonDb<T>(key: string, data: T): Promise<void> {
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    throw new Error("BLOB_READ_WRITE_TOKEN not configured");
+  }
+
   try {
     const blobPath = `data/${key}.json`;
-    const jsonBlob = new Blob([JSON.stringify(data, null, 2)], {
-      type: "application/json",
-    });
+    const jsonString = JSON.stringify(data, null, 2);
 
     console.log("Writing to Blob:", {
       blobPath,
-      dataSize: JSON.stringify(data).length,
+      dataSize: jsonString.length,
       hasBlobToken: !!process.env.BLOB_READ_WRITE_TOKEN,
     });
 
-    await put(blobPath, jsonBlob, {
+    // Pass string directly, not wrapped in Blob object
+    const result = await put(blobPath, jsonString, {
       access: "public",
       addRandomSuffix: false,
       contentType: "application/json",
     });
     
-    console.log("Successfully wrote to Blob:", blobPath);
+    console.log("Successfully wrote to Blob:", { blobPath, url: result.url });
   } catch (e) {
     console.error("Failed to write to Blob storage:", e);
     console.error("Blob error details:", {
       message: e instanceof Error ? e.message : "Unknown error",
+      name: e instanceof Error ? e.name : undefined,
       stack: e instanceof Error ? e.stack : undefined,
     });
     throw new Error("Database write failed");
