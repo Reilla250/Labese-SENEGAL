@@ -1,3 +1,6 @@
+// Vercel Blob Storage Configuration
+// This project uses Vercel Blob for both images and JSON data storage
+
 import { put, list } from "@vercel/blob";
 
 // Default static values to fall back on if no custom database values exist yet
