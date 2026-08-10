@@ -92,9 +92,9 @@ export async function isAuthenticated(): Promise<boolean> {
       return false;
     }
 
-    console.log("Authentication successful, sliding window");
-    // Slide the 5-minute window on every active request
-    await setAdminSession();
+    console.log("Authentication successful");
+    // Don't try to slide the window here - can't modify cookies in page render
+    // The session will be refreshed on the next Server Action call
 
     return true;
   } catch (e) {
