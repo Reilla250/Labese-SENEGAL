@@ -62,13 +62,25 @@ async function writeJsonDb<T>(key: string, data: T): Promise<void> {
       type: "application/json",
     });
 
+    console.log("Writing to Blob:", {
+      blobPath,
+      dataSize: JSON.stringify(data).length,
+      hasBlobToken: !!process.env.BLOB_READ_WRITE_TOKEN,
+    });
+
     await put(blobPath, jsonBlob, {
       access: "public",
       addRandomSuffix: false,
       contentType: "application/json",
     });
+    
+    console.log("Successfully wrote to Blob:", blobPath);
   } catch (e) {
     console.error("Failed to write to Blob storage:", e);
+    console.error("Blob error details:", {
+      message: e instanceof Error ? e.message : "Unknown error",
+      stack: e instanceof Error ? e.stack : undefined,
+    });
     throw new Error("Database write failed");
   }
 }
