@@ -73,17 +73,6 @@ async function writeJsonDb<T>(key: string, data: T): Promise<void> {
   }
 }
 
-    await put(blobPath, jsonBlob, {
-      access: "public", // Public so we can read it with auth
-      addRandomSuffix: false, // Keep consistent filename
-      contentType: "application/json",
-    });
-  } catch (e) {
-    console.error("Failed to write to Blob storage:", e);
-    throw new Error("Database write failed");
-  }
-}
-
 // 1. Site Metadata
 export async function getSiteData() {
   return readJsonDb("site", defaultSite);
