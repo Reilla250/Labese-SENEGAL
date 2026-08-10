@@ -55,8 +55,20 @@ export async function loginAction(
   });
 
   if (emailInput === emailEnv && passwordInput === passwordEnv) {
-    await setAdminSession();
-    return { status: "success" };
+    try {
+      await setAdminSession();
+      console.log("Session set successfully");
+      // Verify session was set
+      const isAuth = await isAuthenticated();
+      console.log("Session verification:", isAuth);
+      return { status: "success" };
+    } catch (error) {
+      console.error("Session creation failed:", error);
+      return {
+        status: "error",
+        message: "Failed to create session. Please try again.",
+      };
+    }
   }
 
   return {
