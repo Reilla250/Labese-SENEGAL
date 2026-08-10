@@ -2,10 +2,9 @@ import crypto from "crypto";
 import { cookies } from "next/headers";
 
 const SESSION_COOKIE_NAME = "labese_admin_session";
-// Session expires after 5 minutes of inactivity.
-// Each authenticated request slides the window.
-const SESSION_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
-const SESSION_EXPIRY_SECONDS = 5 * 60; // 5 minutes in seconds
+// Session expires after 30 minutes of inactivity.
+const SESSION_EXPIRY_MS = 30 * 60 * 1000; // 30 minutes
+const SESSION_EXPIRY_SECONDS = 30 * 60; // 30 minutes in seconds
 
 function getCredentials() {
   // Read variables, strip shell export markers if present in .env
