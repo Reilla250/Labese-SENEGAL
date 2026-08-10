@@ -44,12 +44,15 @@ export async function loginAction(
   const emailInput = String(formData.get("email") ?? "").trim();
   const passwordInput = String(formData.get("password") ?? "");
 
-  let emailEnv = process.env.ADMIN_EMAIL || "admin@labese.org";
-  let passwordEnv = process.env.ADMIN_PASSWORD || "strongPasswordHere";
+  const emailEnv = process.env.ADMIN_EMAIL || "admin@labese.org";
+  const passwordEnv = process.env.ADMIN_PASSWORD || "strongPasswordHere";
 
-  // Clean shell export prefix if necessary
-  if (emailEnv.startsWith("export ")) emailEnv = emailEnv.substring(7);
-  if (passwordEnv.startsWith("export ")) passwordEnv = passwordEnv.substring(7);
+  console.log("Login attempt:", { 
+    emailInput, 
+    emailEnv, 
+    emailMatch: emailInput === emailEnv,
+    passwordMatch: passwordInput === passwordEnv 
+  });
 
   if (emailInput === emailEnv && passwordInput === passwordEnv) {
     await setAdminSession();
