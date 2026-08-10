@@ -47,28 +47,10 @@ export async function loginAction(
   const emailEnv = process.env.ADMIN_EMAIL || "admin@labese.org";
   const passwordEnv = process.env.ADMIN_PASSWORD || "strongPasswordHere";
 
-  console.log("Login attempt:", { 
-    emailInput, 
-    emailEnv, 
-    emailMatch: emailInput === emailEnv,
-    passwordMatch: passwordInput === passwordEnv 
-  });
-
   if (emailInput === emailEnv && passwordInput === passwordEnv) {
-    try {
-      await setAdminSession();
-      console.log("Session set successfully");
-      // Verify session was set
-      const isAuth = await isAuthenticated();
-      console.log("Session verification:", isAuth);
-      return { status: "success" };
-    } catch (error) {
-      console.error("Session creation failed:", error);
-      return {
-        status: "error",
-        message: "Failed to create session. Please try again.",
-      };
-    }
+    await setAdminSession();
+    // Server-side redirect after session is set
+    redirect("/admin");
   }
 
   return {

@@ -1,22 +1,16 @@
 "use client";
 
-import { useActionState, startTransition, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useActionState, startTransition } from "react";
 import { loginAction } from "@/app/actions/admin";
 import { ShieldCheck, Loader2, AlertCircle } from "lucide-react";
 
 export default function LoginForm() {
-  const router = useRouter();
   const [state, formAction, isPending] = useActionState(loginAction, {
     status: "idle",
   });
 
-  useEffect(() => {
-    if (state.status === "success") {
-      router.push("/admin");
-      router.refresh();
-    }
-  }, [state.status, router]);
+  // No need for useEffect redirect - server action handles it
+  // useEffect removed
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
