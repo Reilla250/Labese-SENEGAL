@@ -45,11 +45,18 @@ export default function HomeForm({ initialData }: HomeFormProps) {
     setMessage(null);
     try {
       const res = await saveHomeAction(form);
-      setMessage(res.success
-        ? { type: "success", text: "Home page saved!" }
-        : { type: "error", text: "Save failed." });
-    } catch { setMessage({ type: "error", text: "An error occurred." }); }
-    finally { setLoading(false); }
+      if (res.success) {
+        setMessage({ type: "success", text: "Home page saved successfully!" });
+      } else {
+        setMessage({ type: "error", text: res.error || "Save failed." });
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "An error occurred.";
+      setMessage({ type: "error", text: errorMessage });
+      console.error("Save error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

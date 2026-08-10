@@ -77,18 +77,34 @@ export async function saveSiteAction(data: Parameters<typeof db.saveSiteData>[0]
 
 // 4. Save Home Data
 export async function saveHomeAction(data: Parameters<typeof db.saveHomeData>[0]) {
-  await requireAuth();
-  await db.saveHomeData(data);
-  revalidatePath("/");
-  return { success: true };
+  try {
+    await requireAuth();
+    await db.saveHomeData(data);
+    revalidatePath("/");
+    return { success: true };
+  } catch (error) {
+    console.error("Save home data error:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to save data" 
+    };
+  }
 }
 
 // 5. Save About Data
 export async function saveAboutAction(data: Parameters<typeof db.saveAboutData>[0]) {
-  await requireAuth();
-  await db.saveAboutData(data);
-  revalidatePath("/about");
-  return { success: true };
+  try {
+    await requireAuth();
+    await db.saveAboutData(data);
+    revalidatePath("/about");
+    return { success: true };
+  } catch (error) {
+    console.error("Save about data error:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to save data" 
+    };
+  }
 }
 
 // 6. Save Programmes Data
