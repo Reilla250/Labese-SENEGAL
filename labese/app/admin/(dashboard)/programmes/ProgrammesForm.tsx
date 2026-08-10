@@ -5,7 +5,7 @@ import { saveProgrammesAction } from "@/app/actions/admin";
 import Button from "@/components/ui/Button";
 import { Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 
-interface Programme {
+interface AdminProgramme {
   id: string;
   icon: string;
   title: string;
@@ -16,15 +16,15 @@ interface Programme {
 }
 
 interface ProgrammesFormProps {
-  initialProgrammes: Programme[];
+  initialProgrammes: AdminProgramme[];
 }
 
 export default function ProgrammesForm({ initialProgrammes }: ProgrammesFormProps) {
-  const [programmes, setProgrammes] = useState<Programme[]>(initialProgrammes);
+  const [programmes, setProgrammes] = useState<AdminProgramme[]>(initialProgrammes);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const handleChange = (idx: number, field: keyof Programme, value: string | string[]) => {
+  const handleChange = (idx: number, field: keyof AdminProgramme, value: string | string[]) => {
     setProgrammes((prev) => {
       const next = [...prev];
       next[idx] = { ...next[idx], [field]: value };

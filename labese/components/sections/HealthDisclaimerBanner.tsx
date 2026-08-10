@@ -1,5 +1,5 @@
 import { AlertTriangle } from "lucide-react";
-import { healthDisclaimer } from "@/data/site";
+import { site } from "@/data/site";
 
 export default function HealthDisclaimerBanner() {
   return (
@@ -11,7 +11,7 @@ export default function HealthDisclaimerBanner() {
       />
       <div>
         <p className="text-sm font-semibold text-navy mb-1">Health and emergency disclaimer</p>
-        <p className="text-sm text-ink/80 leading-relaxed">{healthDisclaimer}</p>
+        <p className="text-sm text-ink/80 leading-relaxed">{site.healthDisclaimer}</p>
       </div>
     </div>
   );

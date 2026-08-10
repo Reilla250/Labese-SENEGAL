@@ -9,6 +9,12 @@ export const site = {
   phoneHref: "+221778577078",
   url: "https://www.labese.org",
   founded: "2016",
+  healthDisclaimer:
+    "LABESE is not a hospital, clinic or emergency service. We provide health education, advocacy, non-clinical community support and referral. Diagnosis, testing, prescribing, treatment and emergency care must be provided by licensed professionals and authorised health facilities. For urgent symptoms or immediate danger, contact the nearest qualified health facility or appropriate emergency or protection service.",
+  safeguardingStatement:
+    "LABESE is committed to the safety and dignity of children, adolescents and adults who take part in our work. We use informed consent and assent, confidentiality, secure information handling, safe referral and child-safe feedback or complaint channels. No person is required to disclose HIV status, mental health experience, disability, violence or other sensitive information publicly.",
+  privacyStatement:
+    "LABESE collects only the information needed to respond to enquiries, deliver approved programmes, monitor results or support referrals. Personal information is handled confidentially, shared only when authorised or required for safety, and stored for no longer than necessary.",
 };
 
 export type NavItem = { label: string; href: string };
@@ -39,11 +45,5 @@ export const footerInvolved: NavItem[] = [
   { label: "Contact Us", href: "/contact" },
 ];
 
-export const healthDisclaimer =
-  "LABESE is not a hospital, clinic or emergency service. We provide health education, advocacy, non-clinical community support and referral. Diagnosis, testing, prescribing, treatment and emergency care must be provided by licensed professionals and authorised health facilities. For urgent symptoms or immediate danger, contact the nearest qualified health facility or appropriate emergency or protection service.";
 
-export const safeguardingStatement =
-  "LABESE is committed to the safety and dignity of children, adolescents and adults who take part in our work. We use informed consent and assent, confidentiality, secure information handling, safe referral and child-safe feedback or complaint channels. No person is required to disclose HIV status, mental health experience, disability, violence or other sensitive information publicly.";
 
-export const privacyStatement =
-  "LABESE collects only the information needed to respond to enquiries, deliver approved programmes, monitor results or support referrals. Personal information is handled confidentially, shared only when authorised or required for safety, and stored for no longer than necessary.";
