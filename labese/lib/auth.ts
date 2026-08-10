@@ -31,6 +31,12 @@ export async function setAdminSession() {
   const signature = crypto.createHmac("sha256", password).update(data).digest("hex");
   const token = Buffer.from(JSON.stringify({ data, signature })).toString("base64");
 
+  console.log("Setting session cookie:", {
+    name: SESSION_COOKIE_NAME,
+    tokenLength: token.length,
+    expiry: new Date(expiry).toISOString(),
+  });
+
   cookieStore.set({
     name: SESSION_COOKIE_NAME,
     value: token,
@@ -40,12 +46,23 @@ export async function setAdminSession() {
     path: "/",
     maxAge: SESSION_EXPIRY_SECONDS,
   });
+  
+  console.log("Cookie set successfully");
 }
 
 export async function isAuthenticated(): Promise<boolean> {
   const cookieStore = await cookies();
   const tokenCookie = cookieStore.get(SESSION_COOKIE_NAME);
-  if (!tokenCookie?.value) return false;
+  
+  console.log("Checking authentication:", {
+    hasCookie: !!tokenCookie,
+    cookieName: SESSION_COOKIE_NAME,
+  });
+  
+  if (!tokenCookie?.value) {
+    console.log("No session cookie found");
+    return false;
+  }
 
   try {
     const { data, signature } = JSON.parse(
@@ -58,17 +75,30 @@ export async function isAuthenticated(): Promise<boolean> {
       .update(data)
       .digest("hex");
 
-    if (signature !== expectedSignature) return false;
+    if (signature !== expectedSignature) {
+      console.log("Invalid signature");
+      return false;
+    }
 
     const { email, expiry } = JSON.parse(data);
-    if (Date.now() > expiry) return false;
-    if (email !== expectedEmail) return false;
+    
+    if (Date.now() > expiry) {
+      console.log("Session expired");
+      return false;
+    }
+    
+    if (email !== expectedEmail) {
+      console.log("Email mismatch");
+      return false;
+    }
 
+    console.log("Authentication successful, sliding window");
     // Slide the 5-minute window on every active request
     await setAdminSession();
 
     return true;
   } catch (e) {
+    console.error("Auth check error:", e);
     return false;
   }
 }
