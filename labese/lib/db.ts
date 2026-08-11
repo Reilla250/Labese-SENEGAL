@@ -26,16 +26,16 @@ import {
 // ─── TiDB Connection ──────────────────────────────────────────────────────────
 
 function isConfigured() {
-  return !!(process.env.HOST && process.env.USERNAME && process.env.PASSWORD && process.env.DATABASE);
+  return !!(process.env.TIDB_HOST && process.env.TIDB_USER && process.env.TIDB_PASSWORD && process.env.TIDB_DATABASE);
 }
 
 function getConnection() {
   return mysql.createConnection({
-    host: process.env.HOST,
-    port: Number(process.env.PORT) || 4000,
-    user: process.env.USERNAME,
-    password: process.env.PASSWORD,
-    database: process.env.DATABASE,
+    host: process.env.TIDB_HOST,
+    port: Number(process.env.TIDB_PORT) || 4000,
+    user: process.env.TIDB_USER,
+    password: process.env.TIDB_PASSWORD,
+    database: process.env.TIDB_DATABASE,
     ssl: { rejectUnauthorized: true },
     connectTimeout: 10000,
   });
