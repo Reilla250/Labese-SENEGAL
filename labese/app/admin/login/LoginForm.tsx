@@ -1,21 +1,23 @@
 "use client";
 
 import { useActionState, startTransition, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { loginAction } from "@/app/actions/admin";
 import { ShieldCheck, Loader2, AlertCircle } from "lucide-react";
 
 export default function LoginForm() {
+  const router = useRouter();
   const [state, formAction, isPending] = useActionState(loginAction, {
     status: "idle",
   });
 
-  // Use full page redirect to ensure cookies are sent
   useEffect(() => {
     if (state.status === "success") {
-      // Full page reload ensures cookies are included
-      window.location.href = "/admin";
+      router.replace("/admin");
+      router.refresh();
     }
-  }, [state.status]);
+  }, [router, state.status]);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -122,9 +124,9 @@ export default function LoginForm() {
 
       {/* Back to site */}
       <p className="mt-5 text-center text-xs text-ink/40">
-        <a href="/" className="hover:text-forest transition-colors">
-          ← Return to LABESE website
-        </a>
+        <Link href="/" className="hover:text-forest transition-colors">
+          Return to LABESE website
+        </Link>
       </p>
     </div>
   );

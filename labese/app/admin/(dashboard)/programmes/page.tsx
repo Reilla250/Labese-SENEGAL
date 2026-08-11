@@ -2,18 +2,7 @@ import { getProgrammesData } from "@/lib/db";
 import ProgrammesForm from "./ProgrammesForm";
 
 export default async function ProgrammesPage() {
-  // Note: The admin form uses a simplified AdminProgramme interface
-  // that doesn't match the full Programme type from data/programmes.ts
-  // For now, we'll start with empty data until the form is connected to the right data source
-  const initialProgrammes: Array<{
-    id: string;
-    icon: string;
-    title: string;
-    headline: string;
-    body: string;
-    colour: string;
-    tags: string[];
-  }> = [];
+  const { programmes, programmeIntro } = await getProgrammesData();
 
   return (
     <div className="space-y-6">
@@ -28,7 +17,10 @@ export default async function ProgrammesPage() {
           Add, edit, reorder, or remove service programme areas displayed on the Programmes page.
         </p>
       </div>
-      <ProgrammesForm initialProgrammes={initialProgrammes} />
+      <ProgrammesForm
+        initialProgrammes={programmes}
+        initialProgrammeIntro={programmeIntro}
+      />
     </div>
   );
 }

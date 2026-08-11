@@ -44,9 +44,9 @@ export default function SiteForm({ initialData }: SiteFormProps) {
       if (res.success) {
         setMessage({ type: "success", text: "Site settings saved successfully!" });
       } else {
-        setMessage({ type: "error", text: "Failed to save settings." });
+        setMessage({ type: "error", text: res.error || "Failed to save settings." });
       }
-    } catch (err) {
+    } catch {
       setMessage({ type: "error", text: "An error occurred while saving." });
     } finally {
       setLoading(false);

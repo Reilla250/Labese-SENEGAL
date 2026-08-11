@@ -35,6 +35,11 @@ export type LoginActionState = {
   message?: string;
 };
 
+function saveError(error: unknown, fallback = "Failed to save data") {
+  const message = error instanceof Error ? error.message : fallback;
+  return { success: false as const, error: message };
+}
+
 // 1. Admin Login
 export async function loginAction(
   _prevState: LoginActionState,
@@ -68,10 +73,15 @@ export async function logoutAction() {
 
 // 3. Save Site Data
 export async function saveSiteAction(data: Parameters<typeof db.saveSiteData>[0]) {
-  await requireAuth();
-  await db.saveSiteData(data);
-  revalidateAllPublicPages();
-  return { success: true };
+  try {
+    await requireAuth();
+    await db.saveSiteData(data);
+    revalidateAllPublicPages();
+    return { success: true as const };
+  } catch (error) {
+    console.error("Save site data error:", error);
+    return saveError(error);
+  }
 }
 
 // 4. Save Home Data
@@ -80,13 +90,10 @@ export async function saveHomeAction(data: Parameters<typeof db.saveHomeData>[0]
     await requireAuth();
     await db.saveHomeData(data);
     revalidatePath("/");
-    return { success: true };
+    return { success: true as const };
   } catch (error) {
     console.error("Save home data error:", error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Failed to save data" 
-    };
+    return saveError(error);
   }
 }
 
@@ -96,51 +103,68 @@ export async function saveAboutAction(data: Parameters<typeof db.saveAboutData>[
     await requireAuth();
     await db.saveAboutData(data);
     revalidatePath("/about");
-    return { success: true };
+    return { success: true as const };
   } catch (error) {
     console.error("Save about data error:", error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Failed to save data" 
-    };
+    return saveError(error);
   }
 }
 
 // 6. Save Programmes Data
 export async function saveProgrammesAction(data: Parameters<typeof db.saveProgrammesData>[0]) {
-  await requireAuth();
-  await db.saveProgrammesData(data);
-  revalidatePath("/");
-  revalidatePath("/programmes");
-  return { success: true };
+  try {
+    await requireAuth();
+    await db.saveProgrammesData(data);
+    revalidatePath("/");
+    revalidatePath("/programmes");
+    return { success: true as const };
+  } catch (error) {
+    console.error("Save programmes data error:", error);
+    return saveError(error);
+  }
 }
 
 // 7. Save Initiatives Data
 export async function saveInitiativesAction(data: Parameters<typeof db.saveInitiativesData>[0]) {
-  await requireAuth();
-  await db.saveInitiativesData(data);
-  revalidatePath("/initiatives");
-  revalidatePath("/impact"); // MMHEI metrics shown here too
-  return { success: true };
+  try {
+    await requireAuth();
+    await db.saveInitiativesData(data);
+    revalidatePath("/initiatives");
+    revalidatePath("/impact"); // MMHEI metrics shown here too
+    return { success: true as const };
+  } catch (error) {
+    console.error("Save initiatives data error:", error);
+    return saveError(error);
+  }
 }
 
 // 8. Save Impact Data
 export async function saveImpactAction(data: Parameters<typeof db.saveImpactData>[0]) {
-  await requireAuth();
-  await db.saveImpactData(data);
-  revalidatePath("/");
-  revalidatePath("/impact");
-  return { success: true };
+  try {
+    await requireAuth();
+    await db.saveImpactData(data);
+    revalidatePath("/");
+    revalidatePath("/impact");
+    return { success: true as const };
+  } catch (error) {
+    console.error("Save impact data error:", error);
+    return saveError(error);
+  }
 }
 
 // 9. Save Advocacy Data
 export async function saveAdvocacyAction(data: Parameters<typeof db.saveAdvocacyData>[0]) {
-  await requireAuth();
-  await db.saveAdvocacyData(data);
-  revalidatePath("/");
-  revalidatePath("/about");
-  revalidatePath("/advocacy");
-  return { success: true };
+  try {
+    await requireAuth();
+    await db.saveAdvocacyData(data);
+    revalidatePath("/");
+    revalidatePath("/about");
+    revalidatePath("/advocacy");
+    return { success: true as const };
+  } catch (error) {
+    console.error("Save advocacy data error:", error);
+    return saveError(error);
+  }
 }
 
 // 10. Image upload Action - stores fully in TiDB

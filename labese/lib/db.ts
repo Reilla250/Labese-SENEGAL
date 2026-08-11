@@ -2,6 +2,8 @@
 // Stores all admin-editable content as key-value rows in a single table
 
 import mysql from "mysql2/promise";
+import type { RowDataPacket } from "mysql2";
+import type { ConnectionOptions } from "mysql2/promise";
 
 // Default static values to fall back on if no data exists yet
 import { site as defaultSite } from "@/data/site";
@@ -26,11 +28,36 @@ import {
 // ─── TiDB Connection ──────────────────────────────────────────────────────────
 
 function isConfigured() {
-  return !!(process.env.TIDB_HOST && process.env.TIDB_USER && process.env.TIDB_PASSWORD && process.env.TIDB_DATABASE);
+  return !!(
+    process.env.DATABASE_URL ||
+    (process.env.TIDB_HOST &&
+      process.env.TIDB_USER &&
+      process.env.TIDB_PASSWORD &&
+      process.env.TIDB_DATABASE)
+  );
 }
 
 function getConnection() {
-  return mysql.createConnection({
+  return mysql.createConnection(getConnectionOptions());
+}
+
+function getConnectionOptions(): ConnectionOptions {
+  const databaseUrl = process.env.DATABASE_URL;
+
+  if (databaseUrl) {
+    const url = new URL(databaseUrl);
+    return {
+      host: url.hostname,
+      port: Number(url.port) || 4000,
+      user: decodeURIComponent(url.username),
+      password: decodeURIComponent(url.password),
+      database: decodeURIComponent(url.pathname.replace(/^\//, "")),
+      ssl: { rejectUnauthorized: true },
+      connectTimeout: 10000,
+    };
+  }
+
+  return {
     host: process.env.TIDB_HOST,
     port: Number(process.env.TIDB_PORT) || 4000,
     user: process.env.TIDB_USER,
@@ -38,7 +65,7 @@ function getConnection() {
     database: process.env.TIDB_DATABASE,
     ssl: { rejectUnauthorized: true },
     connectTimeout: 10000,
-  });
+  };
 }
 
 // ─── Bootstrap: Create tables if they don't exist ────────────────────────────
@@ -83,10 +110,10 @@ async function readJsonDb<T>(key: string, defaultValue: T): Promise<T> {
     await ensureTable();
     const conn = await getConnection();
     try {
-      const [rows] = await conn.execute(
+      const [rows] = await conn.execute<Array<RowDataPacket & { value: string }>>(
         "SELECT `value` FROM labese_data WHERE `key` = ?",
         [key]
-      ) as any;
+      );
       if (rows.length > 0) {
         return JSON.parse(rows[0].value) as T;
       }
@@ -102,7 +129,7 @@ async function readJsonDb<T>(key: string, defaultValue: T): Promise<T> {
 
 async function writeJsonDb<T>(key: string, data: T): Promise<void> {
   if (!isConfigured()) {
-    throw new Error("Database not configured - check HOST, USERNAME, PASSWORD, DATABASE env vars");
+    throw new Error("Database not configured - set DATABASE_URL or TIDB_HOST, TIDB_USER, TIDB_PASSWORD, TIDB_DATABASE");
   }
 
   await ensureTable();
@@ -341,10 +368,12 @@ export async function getImageFromDb(id: string): Promise<{ data: Buffer; mimeTy
   await ensureTable();
   const conn = await getConnection();
   try {
-    const [rows] = await conn.execute(
+    const [rows] = await conn.execute<
+      Array<RowDataPacket & { data: Buffer; mime_type: string; name: string }>
+    >(
       "SELECT data, mime_type, name FROM labese_images WHERE id = ?",
       [id]
-    ) as any;
+    );
     if (rows.length === 0) return null;
     return {
       data: Buffer.from(rows[0].data),

@@ -1,78 +1,42 @@
-# 🚀 Quick Start: Configure Vercel Blob Storage in 2 Minutes
+# Quick Start: Configure Vercel + TiDB
 
-## ✅ Step 1: Connect Your Existing Blob Storage
+## 1. Set Database Variables
 
-You already have `fbst-uploads` created! Now just connect it:
+In Vercel, open the project, then go to **Settings -> Environment Variables**.
 
-1. Go to: https://vercel.com/dashboard (Storage tab)
-2. Click on **fbst-uploads** (your Blob Store)
-3. Click **"Connect to Project"** or **"Connect"**
-4. Select your **Labese-SENEGAL** project
-5. ✅ Done! The `BLOB_READ_WRITE_TOKEN` environment variable is auto-added
+Add either the single TiDB connection URL:
 
-## ✅ Step 2: Set Admin Login Credentials
-
-1. Go to **Settings** → **Environment Variables**
-2. Add these two:
-
-```
-Name: ADMIN_EMAIL
-Value: admin@labese.com
-Environments: All (Production, Preview, Development)
+```txt
+DATABASE_URL=mysql://USER:PASSWORD@HOST:4000/DATABASE
 ```
 
+Or add the separate values:
+
+```txt
+TIDB_HOST=your-tidb-host
+TIDB_PORT=4000
+TIDB_USER=your-tidb-user
+TIDB_PASSWORD=your-tidb-password
+TIDB_DATABASE=your-database-name
 ```
-Name: ADMIN_PASSWORD  
-Value: Nkurunziza123
-Environments: All (Production, Preview, Development)
+
+Set them for **Production**, **Preview**, and **Development** if you use all environments.
+
+## 2. Set Admin Login
+
+```txt
+ADMIN_EMAIL=admin@labese.com
+ADMIN_PASSWORD=use-a-strong-password
 ```
 
-3. Click **Save** after each
+Optional but recommended:
 
-## ✅ Step 3: Redeploy
+```txt
+SESSION_SECRET=use-a-long-random-secret
+```
 
-1. Go to **Deployments** tab
-2. Click **⋮** (3 dots) on latest deployment
-3. Click **Redeploy**
-4. ✅ Wait for build to complete (~2-3 minutes)
+## 3. Redeploy
 
-## ✅ Step 4: Login to Admin
+After saving environment variables, redeploy the latest Vercel deployment.
 
-1. Visit: `https://your-site.vercel.app/admin/login`
-2. Email: `admin@labese.com`
-3. Password: `Nkurunziza123`
-4. 🎉 You're in!
-
----
-
-## 📋 Environment Variables Checklist
-
-After completing steps above, you should have these in Vercel:
-
-**Auto-added by Blob:**
-- ✅ BLOB_READ_WRITE_TOKEN
-
-**Manually added:**
-- ✅ ADMIN_EMAIL
-- ✅ ADMIN_PASSWORD
-
----
-
-## 🏗️ Architecture
-
-This project uses **Vercel Blob for EVERYTHING**:
-- `/images/{id}.{ext}` - Uploaded images (public)
-- `/metadata/{id}.json` - Image metadata (private JSON)
-- `/data/{collection}.json` - Site data (programmes, initiatives, etc.)
-
-No KV needed! Everything is stored as JSON files in Blob.
-
----
-
-## 🆘 Problems?
-
-**Build failing?** Check Vercel build logs for specific error
-
-**Can't login?** Double-check ADMIN_EMAIL and ADMIN_PASSWORD are set exactly as shown
-
-**Images not uploading?** Make sure BLOB_READ_WRITE_TOKEN exists and fbst-uploads is connected
+The admin pages save content and uploaded image metadata/data to TiDB. If saves fail with `Database not configured`, Vercel is missing `DATABASE_URL` or one of the required `TIDB_*` variables above.

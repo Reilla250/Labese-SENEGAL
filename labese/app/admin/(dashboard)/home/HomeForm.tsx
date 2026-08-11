@@ -18,12 +18,14 @@ interface HomeFormProps {
   };
 }
 
+type HomeTextField = Exclude<keyof HomeFormProps["initialData"], "images">;
+
 export default function HomeForm({ initialData }: HomeFormProps) {
   const [form, setForm] = useState(initialData);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const set = (field: string, value: string) =>
+  const set = (field: HomeTextField, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
   const setImage = (idx: number, field: keyof HomeImage, value: string) =>
@@ -71,18 +73,18 @@ export default function HomeForm({ initialData }: HomeFormProps) {
       {/* Hero Section */}
       <section className="bg-white border border-line rounded-2xl p-6 space-y-4">
         <h2 className="font-display text-lg font-bold text-navy">Hero Section</h2>
-        {[
+        {([
           { field: "heroSubtitle", label: "Hero Eyebrow / Subtitle" },
           { field: "heroTitle", label: "Hero Main Title" },
           { field: "heroDescription", label: "Hero Description", textarea: true },
-        ].map(({ field, label, textarea }) => (
+        ] satisfies Array<{ field: HomeTextField; label: string; textarea?: boolean }>).map(({ field, label, textarea }) => (
           <div key={field}>
             <label className="block text-xs font-semibold uppercase tracking-wider text-navy mb-1.5">{label}</label>
             {textarea ? (
-              <textarea rows={3} value={(form as any)[field]} onChange={(e) => set(field, e.target.value)}
+              <textarea rows={3} value={form[field]} onChange={(e) => set(field, e.target.value)}
                 className="block w-full rounded-lg border border-line bg-cream/20 px-3.5 py-2 text-sm text-navy focus:border-forest focus:outline-none focus:ring-1 focus:ring-forest" />
             ) : (
-              <input type="text" value={(form as any)[field]} onChange={(e) => set(field, e.target.value)}
+              <input type="text" value={form[field]} onChange={(e) => set(field, e.target.value)}
                 className="block w-full rounded-lg border border-line bg-cream/20 px-3.5 py-2 text-sm text-navy focus:border-forest focus:outline-none focus:ring-1 focus:ring-forest" />
             )}
           </div>
@@ -92,18 +94,18 @@ export default function HomeForm({ initialData }: HomeFormProps) {
       {/* About Section */}
       <section className="bg-white border border-line rounded-2xl p-6 space-y-4">
         <h2 className="font-display text-lg font-bold text-navy">About Block</h2>
-        {[
+        {([
           { field: "aboutTitle", label: "Section Title" },
           { field: "aboutParagraph1", label: "Paragraph 1", textarea: true },
           { field: "aboutParagraph2", label: "Paragraph 2", textarea: true },
-        ].map(({ field, label, textarea }) => (
+        ] satisfies Array<{ field: HomeTextField; label: string; textarea?: boolean }>).map(({ field, label, textarea }) => (
           <div key={field}>
             <label className="block text-xs font-semibold uppercase tracking-wider text-navy mb-1.5">{label}</label>
             {textarea ? (
-              <textarea rows={4} value={(form as any)[field]} onChange={(e) => set(field, e.target.value)}
+              <textarea rows={4} value={form[field]} onChange={(e) => set(field, e.target.value)}
                 className="block w-full rounded-lg border border-line bg-cream/20 px-3.5 py-2 text-sm text-navy focus:border-forest focus:outline-none focus:ring-1 focus:ring-forest" />
             ) : (
-              <input type="text" value={(form as any)[field]} onChange={(e) => set(field, e.target.value)}
+              <input type="text" value={form[field]} onChange={(e) => set(field, e.target.value)}
                 className="block w-full rounded-lg border border-line bg-cream/20 px-3.5 py-2 text-sm text-navy focus:border-forest focus:outline-none focus:ring-1 focus:ring-forest" />
             )}
           </div>

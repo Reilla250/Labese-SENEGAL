@@ -2,29 +2,45 @@
 
 import { useState } from "react";
 import { saveProgrammesAction } from "@/app/actions/admin";
+import type { Programme } from "@/data/programmes";
 import Button from "@/components/ui/Button";
 import { Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 
-interface AdminProgramme {
-  id: string;
-  icon: string;
-  title: string;
-  headline: string;
-  body: string;
-  colour: string;
-  tags: string[];
-}
-
 interface ProgrammesFormProps {
-  initialProgrammes: AdminProgramme[];
+  initialProgrammes: Programme[];
+  initialProgrammeIntro: string;
 }
 
-export default function ProgrammesForm({ initialProgrammes }: ProgrammesFormProps) {
-  const [programmes, setProgrammes] = useState<AdminProgramme[]>(initialProgrammes);
+const iconOptions: Programme["icon"][] = [
+  "megaphone",
+  "scale",
+  "heart-pulse",
+  "brain",
+  "baby",
+  "shield-plus",
+  "leaf",
+  "hand-heart",
+  "route",
+];
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+export default function ProgrammesForm({
+  initialProgrammes,
+  initialProgrammeIntro,
+}: ProgrammesFormProps) {
+  const [programmes, setProgrammes] = useState<Programme[]>(initialProgrammes);
+  const [programmeIntro, setProgrammeIntro] = useState(initialProgrammeIntro);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const handleChange = (idx: number, field: keyof AdminProgramme, value: string | string[]) => {
+  const handleChange = <K extends keyof Programme>(idx: number, field: K, value: Programme[K]) => {
     setProgrammes((prev) => {
       const next = [...prev];
       next[idx] = { ...next[idx], [field]: value };
@@ -32,28 +48,40 @@ export default function ProgrammesForm({ initialProgrammes }: ProgrammesFormProp
     });
   };
 
-  const handleTagChange = (idx: number, value: string) => {
-    const tags = value.split(",").map((t) => t.trim()).filter(Boolean);
-    handleChange(idx, "tags", tags);
+  const handleActivitiesChange = (idx: number, value: string) => {
+    handleChange(
+      idx,
+      "activities",
+      value
+        .split("\n")
+        .map((item) => item.trim())
+        .filter(Boolean)
+    );
   };
 
   const addProgramme = () => {
+    const number = programmes.length + 1;
     setProgrammes((prev) => [
       ...prev,
       {
-        id: `prog-${Date.now()}`,
-        icon: "heart",
+        number,
+        slug: `programme-${Date.now()}`,
         title: "",
-        headline: "",
-        body: "",
-        colour: "forest",
-        tags: [],
+        shortTitle: "",
+        description: "",
+        activities: [],
+        advocacyFocus: "",
+        icon: "megaphone",
       },
     ]);
   };
 
   const removeProgramme = (idx: number) => {
-    setProgrammes((prev) => prev.filter((_, i) => i !== idx));
+    setProgrammes((prev) =>
+      prev
+        .filter((_, i) => i !== idx)
+        .map((programme, i) => ({ ...programme, number: i + 1 }))
+    );
   };
 
   const move = (idx: number, dir: -1 | 1) => {
@@ -62,7 +90,7 @@ export default function ProgrammesForm({ initialProgrammes }: ProgrammesFormProp
       const target = idx + dir;
       if (target < 0 || target >= next.length) return prev;
       [next[idx], next[target]] = [next[target], next[idx]];
-      return next;
+      return next.map((programme, i) => ({ ...programme, number: i + 1 }));
     });
   };
 
@@ -71,28 +99,24 @@ export default function ProgrammesForm({ initialProgrammes }: ProgrammesFormProp
     setLoading(true);
     setMessage(null);
     try {
-      // Note: This form uses AdminProgramme type which doesn't match the main Programme type
-      // For now, we'll show a warning that this admin section is not yet implemented
-      setMessage({ 
-        type: "error", 
-        text: "This admin section is not yet connected to the data layer. Use the data files directly for now." 
+      const res = await saveProgrammesAction({ programmes, programmeIntro });
+      if (res.success) {
+        setMessage({ type: "success", text: "Programmes saved successfully!" });
+      } else {
+        setMessage({ type: "error", text: res.error || "Failed to save programmes." });
+      }
+    } catch (error) {
+      setMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : "An error occurred while saving.",
       });
-      setLoading(false);
-      return;
-      
-      // TODO: Create a proper admin programmes management system
-      // const res = await saveProgrammesAction({ programmes, programmeIntro: "" });
-      // if (res.success) {
-      //   setMessage({ type: "success", text: "Programmes saved successfully!" });
-      // } else {
-      //   setMessage({ type: "error", text: "Failed to save programmes." });
-      // }
-    } catch {
-      setMessage({ type: "error", text: "An error occurred while saving." });
     } finally {
       setLoading(false);
     }
   };
+
+  const inputCls =
+    "mt-1.5 block w-full rounded-lg border border-line bg-cream/20 px-3.5 py-2 text-sm text-navy focus:border-forest focus:outline-none focus:ring-1 focus:ring-forest";
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -109,9 +133,21 @@ export default function ProgrammesForm({ initialProgrammes }: ProgrammesFormProp
         </div>
       )}
 
+      <section className="bg-white border border-line rounded-2xl p-5 md:p-6">
+        <label className="block text-xs font-semibold uppercase tracking-wider text-navy">
+          Programmes Intro
+        </label>
+        <textarea
+          value={programmeIntro}
+          onChange={(e) => setProgrammeIntro(e.target.value)}
+          rows={4}
+          className={inputCls}
+        />
+      </section>
+
       {programmes.map((prog, idx) => (
         <div
-          key={prog.id}
+          key={`${prog.slug}-${idx}`}
           className="bg-white border border-line rounded-2xl p-5 md:p-6 space-y-4"
         >
           <div className="flex items-center justify-between">
@@ -124,6 +160,7 @@ export default function ProgrammesForm({ initialProgrammes }: ProgrammesFormProp
                 onClick={() => move(idx, -1)}
                 disabled={idx === 0}
                 className="h-8 w-8 flex items-center justify-center rounded-lg border border-line text-ink/50 hover:text-navy hover:border-navy/30 disabled:opacity-30 transition-colors"
+                aria-label="Move programme up"
               >
                 <ChevronUp size={14} />
               </button>
@@ -132,6 +169,7 @@ export default function ProgrammesForm({ initialProgrammes }: ProgrammesFormProp
                 onClick={() => move(idx, 1)}
                 disabled={idx === programmes.length - 1}
                 className="h-8 w-8 flex items-center justify-center rounded-lg border border-line text-ink/50 hover:text-navy hover:border-navy/30 disabled:opacity-30 transition-colors"
+                aria-label="Move programme down"
               >
                 <ChevronDown size={14} />
               </button>
@@ -139,6 +177,7 @@ export default function ProgrammesForm({ initialProgrammes }: ProgrammesFormProp
                 type="button"
                 onClick={() => removeProgramme(idx)}
                 className="h-8 w-8 flex items-center justify-center rounded-lg border border-line text-rose-400 hover:text-rose-600 hover:border-rose-300 transition-colors"
+                aria-label="Remove programme"
               >
                 <Trash2 size={14} />
               </button>
@@ -153,64 +192,88 @@ export default function ProgrammesForm({ initialProgrammes }: ProgrammesFormProp
               <input
                 type="text"
                 value={prog.title}
-                onChange={(e) => handleChange(idx, "title", e.target.value)}
+                onChange={(e) => {
+                  const title = e.target.value;
+                  handleChange(idx, "title", title);
+                  if (!prog.slug || prog.slug.startsWith("programme-")) {
+                    handleChange(idx, "slug", slugify(title));
+                  }
+                }}
                 required
-                className="mt-1.5 block w-full rounded-lg border border-line bg-cream/20 px-3.5 py-2 text-sm text-navy focus:border-forest focus:outline-none focus:ring-1 focus:ring-forest"
+                className={inputCls}
               />
             </div>
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-navy">
-                Icon (e.g. heart, shield)
+                Short Title
               </label>
               <input
                 type="text"
+                value={prog.shortTitle}
+                onChange={(e) => handleChange(idx, "shortTitle", e.target.value)}
+                required
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-navy">
+                Slug
+              </label>
+              <input
+                type="text"
+                value={prog.slug}
+                onChange={(e) => handleChange(idx, "slug", slugify(e.target.value))}
+                required
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-navy">
+                Icon
+              </label>
+              <select
                 value={prog.icon}
-                onChange={(e) => handleChange(idx, "icon", e.target.value)}
-                className="mt-1.5 block w-full rounded-lg border border-line bg-cream/20 px-3.5 py-2 text-sm text-navy focus:border-forest focus:outline-none focus:ring-1 focus:ring-forest"
-              />
+                onChange={(e) => handleChange(idx, "icon", e.target.value as Programme["icon"])}
+                className={inputCls}
+              >
+                {iconOptions.map((icon) => (
+                  <option key={icon} value={icon}>
+                    {icon}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="sm:col-span-2">
               <label className="block text-xs font-semibold uppercase tracking-wider text-navy">
-                Headline
-              </label>
-              <input
-                type="text"
-                value={prog.headline}
-                onChange={(e) => handleChange(idx, "headline", e.target.value)}
-                className="mt-1.5 block w-full rounded-lg border border-line bg-cream/20 px-3.5 py-2 text-sm text-navy focus:border-forest focus:outline-none focus:ring-1 focus:ring-forest"
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-navy">
-                Body Text
+                Description
               </label>
               <textarea
-                value={prog.body}
-                onChange={(e) => handleChange(idx, "body", e.target.value)}
+                value={prog.description}
+                onChange={(e) => handleChange(idx, "description", e.target.value)}
+                rows={4}
+                className={inputCls}
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-navy">
+                Activities
+              </label>
+              <textarea
+                value={prog.activities.join("\n")}
+                onChange={(e) => handleActivitiesChange(idx, e.target.value)}
+                rows={5}
+                className={inputCls}
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-navy">
+                Advocacy Focus
+              </label>
+              <textarea
+                value={prog.advocacyFocus}
+                onChange={(e) => handleChange(idx, "advocacyFocus", e.target.value)}
                 rows={3}
-                className="mt-1.5 block w-full rounded-lg border border-line bg-cream/20 px-3.5 py-2 text-sm text-navy focus:border-forest focus:outline-none focus:ring-1 focus:ring-forest"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-navy">
-                Colour (e.g. forest, amber)
-              </label>
-              <input
-                type="text"
-                value={prog.colour}
-                onChange={(e) => handleChange(idx, "colour", e.target.value)}
-                className="mt-1.5 block w-full rounded-lg border border-line bg-cream/20 px-3.5 py-2 text-sm text-navy focus:border-forest focus:outline-none focus:ring-1 focus:ring-forest"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-navy">
-                Tags (comma separated)
-              </label>
-              <input
-                type="text"
-                value={prog.tags.join(", ")}
-                onChange={(e) => handleTagChange(idx, e.target.value)}
-                className="mt-1.5 block w-full rounded-lg border border-line bg-cream/20 px-3.5 py-2 text-sm text-navy focus:border-forest focus:outline-none focus:ring-1 focus:ring-forest"
+                className={inputCls}
               />
             </div>
           </div>

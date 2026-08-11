@@ -10,7 +10,7 @@ interface ImageFile {
   name: string;
   url: string;
   size: number;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 interface ImageLibraryClientProps {

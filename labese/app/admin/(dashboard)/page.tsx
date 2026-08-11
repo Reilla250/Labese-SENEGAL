@@ -9,7 +9,6 @@ import {
   Home,
   FileText,
   ArrowRight,
-  ExternalLink,
 } from "lucide-react";
 
 export default async function AdminDashboardPage() {
