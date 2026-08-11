@@ -1,7 +1,7 @@
 // Vercel Blob Storage Configuration
 // This project uses Vercel Blob for both images and JSON data storage
 
-import { put, list } from "@vercel/blob";
+import { put } from "@vercel/blob";
 
 // Default static values to fall back on if no custom database values exist yet
 import { site as defaultSite } from "@/data/site";
@@ -24,8 +24,16 @@ import {
 } from "@/data/advocacy";
 
 /**
- * Read a JSON file from Vercel Blob.
+ * The base URL of the Vercel Blob store.
+ * We fetch JSON files directly by URL instead of using list(),
+ * which avoids burning Advanced Operations on every page load.
+ */
+const BLOB_BASE_URL = "https://0xfyk5vg923diks2.public.blob.vercel-storage.com";
+
+/**
+ * Read a JSON file from Vercel Blob by fetching its URL directly.
  * Uses cache: "no-store" so pages always get fresh data after a save.
+ * Uses ZERO Advanced Operations (no list() call).
  */
 async function readJsonDb<T>(key: string, defaultValue: T): Promise<T> {
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
@@ -33,18 +41,16 @@ async function readJsonDb<T>(key: string, defaultValue: T): Promise<T> {
   }
 
   try {
-    const { blobs } = await list({
-      prefix: `data/${key}.json`,
-      limit: 1,
-      token: process.env.BLOB_READ_WRITE_TOKEN,
-    });
+    const url = `${BLOB_BASE_URL}/data/${key}.json`;
+    const response = await fetch(url, { cache: "no-store" });
 
-    if (blobs.length > 0) {
-      // cache: "no-store" ensures we never serve a stale cached copy
-      const response = await fetch(blobs[0].url, { cache: "no-store" });
-      if (response.ok) {
-        return (await response.json()) as T;
-      }
+    if (response.ok) {
+      return (await response.json()) as T;
+    }
+
+    // 404 means file doesn't exist yet - use default silently
+    if (response.status !== 404) {
+      console.log(`readJsonDb [${key}]: HTTP ${response.status}`);
     }
 
     return defaultValue;

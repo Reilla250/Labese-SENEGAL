@@ -144,6 +144,29 @@ export async function saveAdvocacyAction(data: Parameters<typeof db.saveAdvocacy
   return { success: true };
 }
 
+const BLOB_BASE_URL = "https://0xfyk5vg923diks2.public.blob.vercel-storage.com";
+
+// Helper to read the image index
+async function getImageIndex(): Promise<Array<{ id: string; name: string; url: string; size: number; mtime: number }>> {
+  try {
+    const response = await fetch(`${BLOB_BASE_URL}/data/image-index.json`, { cache: "no-store" });
+    if (response.ok) return await response.json();
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+// Helper to save the image index
+async function saveImageIndex(images: Array<{ id: string; name: string; url: string; size: number; mtime: number }>) {
+  await put("data/image-index.json", JSON.stringify(images, null, 2), {
+    access: "public",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    contentType: "application/json",
+  });
+}
+
 // 10. Image upload Action with metadata
 export async function uploadImageAction(formData: FormData) {
   await requireAuth();
@@ -155,42 +178,30 @@ export async function uploadImageAction(formData: FormData) {
   try {
     const imageId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
     const ext = file.name.split(".").pop() || "jpg";
-    
-    // Upload image to Blob (public, in /images/ folder)
+
+    // Upload image to Blob
     const imageBlob = await put(`images/${imageId}.${ext}`, file, {
       access: "public",
       addRandomSuffix: false,
     });
 
-    // Create metadata object
-    const metadata = {
+    // Add to image index
+    const newImage = {
       id: imageId,
       name: file.name,
-      originalName: file.name,
+      url: imageBlob.url,
       size: file.size,
-      type: file.type,
-      uploadedAt: new Date().toISOString(),
-      imageUrl: imageBlob.url,
-      pathname: imageBlob.pathname,
+      mtime: Date.now(),
     };
 
-    // Store metadata as JSON in Blob (in /metadata/ folder)
-    await put(`metadata/${imageId}.json`, JSON.stringify(metadata, null, 2), {
-      access: "public",
-      addRandomSuffix: false,
-      allowOverwrite: true,
-      contentType: "application/json",
-    });
+    const index = await getImageIndex();
+    index.unshift(newImage); // newest first
+    await saveImageIndex(index);
 
     revalidatePath("/admin/images");
     return {
       success: true,
-      image: {
-        id: imageId,
-        name: file.name,
-        url: imageBlob.url,
-        size: file.size,
-      },
+      image: newImage,
       error: null,
     };
   } catch (e) {
@@ -199,25 +210,21 @@ export async function uploadImageAction(formData: FormData) {
   }
 }
 
-// 11. Delete image Action (deletes both image and metadata)
+// 11. Delete image Action
 export async function deleteImageAction(formData: FormData) {
   await requireAuth();
   const url = String(formData.get("url") ?? "");
   const imageId = String(formData.get("id") ?? "");
-  
+
   try {
-    // Delete image
+    // Delete image from Blob
     await del(url);
-    
-    // Delete metadata JSON
-    if (imageId) {
-      try {
-        await del(`metadata/${imageId}.json`);
-      } catch (e) {
-        console.log("Metadata file may not exist:", e);
-      }
-    }
-    
+
+    // Remove from image index
+    const index = await getImageIndex();
+    const updated = index.filter((img) => img.id !== imageId);
+    await saveImageIndex(updated);
+
     revalidatePath("/admin/images");
     return { success: true, error: null };
   } catch (e) {
@@ -230,40 +237,26 @@ export async function deleteImageAction(formData: FormData) {
 export async function getUploadedImagesAction() {
   await requireAuth();
   try {
-    const { blobs } = await list({ prefix: "images/" });
-    
-    // Fetch metadata for each image
-    const imagesWithMetadata = await Promise.all(
-      blobs.map(async (blob) => {
-        const imageId = blob.pathname.split("/")[1]?.split(".")[0];
-        let metadata = null;
-        
-        try {
-          // Try to fetch metadata JSON
-          const metadataResponse = await fetch(
-            blob.url.replace(`images/${blob.pathname.split("/")[1]}`, `metadata/${imageId}.json`)
-          );
-          if (metadataResponse.ok) {
-            metadata = await metadataResponse.json();
-          }
-        } catch (e) {
-          console.log("No metadata found for:", imageId);
-        }
+    // Fetch the image index JSON directly (no list() = no Advanced Operations)
+    const BLOB_BASE_URL = "https://0xfyk5vg923diks2.public.blob.vercel-storage.com";
+    const response = await fetch(`${BLOB_BASE_URL}/data/image-index.json`, {
+      cache: "no-store",
+    });
 
-        return {
-          id: imageId || blob.pathname,
-          name: metadata?.originalName || blob.pathname.split("/").pop() || "unknown",
-          url: blob.url,
-          size: blob.size,
-          mtime: new Date(blob.uploadedAt).getTime(),
-          metadata,
-        };
-      })
-    );
-    
-    return imagesWithMetadata.sort((a, b) => b.mtime - a.mtime);
+    if (response.ok) {
+      const images = await response.json();
+      return images as Array<{
+        id: string;
+        name: string;
+        url: string;
+        size: number;
+        mtime: number;
+      }>;
+    }
+
+    return [];
   } catch (e) {
-    console.error("Failed to list images:", e);
+    console.error("Failed to load image index:", e);
     return [];
   }
 }
