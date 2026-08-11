@@ -1,6 +1,5 @@
 "use server";
 
-import { put, del } from "@vercel/blob";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { isAuthenticated, setAdminSession, logout } from "@/lib/auth";
@@ -144,7 +143,7 @@ export async function saveAdvocacyAction(data: Parameters<typeof db.saveAdvocacy
   return { success: true };
 }
 
-// 10. Image upload Action
+// 10. Image upload Action - stores fully in TiDB
 export async function uploadImageAction(formData: FormData) {
   await requireAuth();
   const file = formData.get("file") as File;
@@ -152,26 +151,29 @@ export async function uploadImageAction(formData: FormData) {
     return { success: false, error: "No file was selected.", image: null };
   }
 
+  // Limit file size to 10MB
+  if (file.size > 10 * 1024 * 1024) {
+    return { success: false, error: "File too large. Maximum size is 10MB.", image: null };
+  }
+
   try {
     const imageId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
-    const ext = file.name.split(".").pop() || "jpg";
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const mimeType = file.type || "image/jpeg";
 
-    // Upload actual image file to Vercel Blob
-    const imageBlob = await put(`images/${imageId}.${ext}`, file, {
-      access: "public",
-      addRandomSuffix: false,
-      allowOverwrite: true,
-    });
+    // Store image fully in TiDB
+    const url = await db.saveImageToDb(imageId, file.name, mimeType, file.size, buffer);
 
-    // Save image record to TiDB index
     const newImage: db.ImageRecord = {
       id: imageId,
       name: file.name,
-      url: imageBlob.url,
+      url, // /api/images/{id}
       size: file.size,
       mtime: Date.now(),
     };
 
+    // Update image index in TiDB
     const index = await db.getImageIndex();
     index.unshift(newImage);
     await db.saveImageIndex(index);
@@ -180,21 +182,21 @@ export async function uploadImageAction(formData: FormData) {
     return { success: true, image: newImage, error: null };
   } catch (e) {
     console.error("Image upload failed:", e);
-    return { success: false, error: "An error occurred during file upload.", image: null };
+    const msg = e instanceof Error ? e.message : "Upload failed";
+    return { success: false, error: msg, image: null };
   }
 }
 
-// 11. Delete image Action
+// 11. Delete image Action - deletes from TiDB
 export async function deleteImageAction(formData: FormData) {
   await requireAuth();
-  const url = String(formData.get("url") ?? "");
   const imageId = String(formData.get("id") ?? "");
 
   try {
-    // Delete file from Vercel Blob
-    await del(url);
+    // Delete image data from TiDB
+    await db.deleteImageFromDb(imageId);
 
-    // Remove from TiDB index
+    // Remove from index
     const index = await db.getImageIndex();
     await db.saveImageIndex(index.filter((img) => img.id !== imageId));
 

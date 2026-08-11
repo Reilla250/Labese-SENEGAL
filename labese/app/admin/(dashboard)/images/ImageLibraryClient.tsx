@@ -57,10 +57,9 @@ export default function ImageLibraryClient({ initialImages }: ImageLibraryClient
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleDelete = async (id: string, name: string, url: string) => {
+  const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
     const formData = new FormData();
-    formData.append("url", url);
     formData.append("id", id);
     const res = await deleteImageAction(formData);
     if (res.success) {
@@ -174,7 +173,7 @@ export default function ImageLibraryClient({ initialImages }: ImageLibraryClient
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDelete(img.id, img.name, img.url)}
+                    onClick={() => handleDelete(img.id, img.name)}
                     title="Delete image"
                     className="h-9 w-9 rounded-full bg-white flex items-center justify-center text-rose-500 hover:bg-rose-500 hover:text-white transition-colors"
                   >

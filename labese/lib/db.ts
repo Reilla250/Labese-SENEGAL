@@ -25,6 +25,10 @@ import {
 
 // ─── TiDB Connection ──────────────────────────────────────────────────────────
 
+function isConfigured() {
+  return !!(process.env.HOST && process.env.USERNAME && process.env.PASSWORD && process.env.DATABASE);
+}
+
 function getConnection() {
   return mysql.createConnection({
     host: process.env.HOST,
@@ -37,11 +41,15 @@ function getConnection() {
   });
 }
 
-// ─── Bootstrap: Create table if it doesn't exist ─────────────────────────────
+// ─── Bootstrap: Create tables if they don't exist ────────────────────────────
+
+let tableEnsured = false;
 
 async function ensureTable() {
+  if (tableEnsured) return;
   const conn = await getConnection();
   try {
+    // Key-value table for all content
     await conn.execute(`
       CREATE TABLE IF NOT EXISTS labese_data (
         \`key\` VARCHAR(255) NOT NULL PRIMARY KEY,
@@ -49,7 +57,22 @@ async function ensureTable() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
     `);
+    // Images table for full image storage
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS labese_images (
+        id VARCHAR(255) NOT NULL PRIMARY KEY,
+        name VARCHAR(500) NOT NULL,
+        mime_type VARCHAR(100) NOT NULL DEFAULT 'image/jpeg',
+        size INT NOT NULL DEFAULT 0,
+        data LONGBLOB NOT NULL,
+        uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    tableEnsured = true;
   } finally {
+    await conn.end();
+  }
+}  } finally {
     await conn.end();
   }
 }
@@ -57,8 +80,7 @@ async function ensureTable() {
 // ─── Generic read/write helpers ───────────────────────────────────────────────
 
 async function readJsonDb<T>(key: string, defaultValue: T): Promise<T> {
-  // Skip DB during build when env vars aren't available
-  if (!process.env.HOST) return defaultValue;
+  if (!isConfigured()) return defaultValue;
 
   try {
     await ensureTable();
@@ -68,7 +90,6 @@ async function readJsonDb<T>(key: string, defaultValue: T): Promise<T> {
         "SELECT `value` FROM labese_data WHERE `key` = ?",
         [key]
       ) as any;
-
       if (rows.length > 0) {
         return JSON.parse(rows[0].value) as T;
       }
@@ -83,19 +104,18 @@ async function readJsonDb<T>(key: string, defaultValue: T): Promise<T> {
 }
 
 async function writeJsonDb<T>(key: string, data: T): Promise<void> {
-  if (!process.env.HOST) {
-    throw new Error("Database not configured");
+  if (!isConfigured()) {
+    throw new Error("Database not configured - check HOST, USERNAME, PASSWORD, DATABASE env vars");
   }
 
   await ensureTable();
   const conn = await getConnection();
   try {
-    const jsonString = JSON.stringify(data);
     await conn.execute(
       `INSERT INTO labese_data (\`key\`, \`value\`)
        VALUES (?, ?)
        ON DUPLICATE KEY UPDATE \`value\` = VALUES(\`value\`), updated_at = NOW()`,
-      [key, jsonString]
+      [key, JSON.stringify(data)]
     );
     console.log(`TiDB saved [${key}]`);
   } finally {
@@ -289,4 +309,64 @@ export async function getImageIndex(): Promise<ImageRecord[]> {
 
 export async function saveImageIndex(images: ImageRecord[]): Promise<void> {
   return writeJsonDb("image-index", images);
+}
+
+// ─── 9. Full Image Storage in TiDB ───────────────────────────────────────────
+
+export async function saveImageToDb(
+  id: string,
+  name: string,
+  mimeType: string,
+  size: number,
+  buffer: Buffer
+): Promise<string> {
+  if (!isConfigured()) throw new Error("Database not configured");
+
+  await ensureTable();
+  const conn = await getConnection();
+  try {
+    await conn.execute(
+      `INSERT INTO labese_images (id, name, mime_type, size, data)
+       VALUES (?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE name=VALUES(name), data=VALUES(data), size=VALUES(size)`,
+      [id, name, mimeType, size, buffer]
+    );
+    // Return the serving URL (served via Next.js API route)
+    return `/api/images/${id}`;
+  } finally {
+    await conn.end();
+  }
+}
+
+export async function getImageFromDb(id: string): Promise<{ data: Buffer; mimeType: string; name: string } | null> {
+  if (!isConfigured()) return null;
+
+  await ensureTable();
+  const conn = await getConnection();
+  try {
+    const [rows] = await conn.execute(
+      "SELECT data, mime_type, name FROM labese_images WHERE id = ?",
+      [id]
+    ) as any;
+    if (rows.length === 0) return null;
+    return {
+      data: Buffer.from(rows[0].data),
+      mimeType: rows[0].mime_type,
+      name: rows[0].name,
+    };
+  } finally {
+    await conn.end();
+  }
+}
+
+export async function deleteImageFromDb(id: string): Promise<void> {
+  if (!isConfigured()) return;
+
+  await ensureTable();
+  const conn = await getConnection();
+  try {
+    await conn.execute("DELETE FROM labese_images WHERE id = ?", [id]);
+  } finally {
+    await conn.end();
+  }
 }
