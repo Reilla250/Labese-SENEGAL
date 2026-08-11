@@ -4,6 +4,8 @@ import Breadcrumb from "@/components/ui/Breadcrumb";
 import { getSiteData } from "@/lib/db";
 import { Lock, Mail } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Privacy",
   description:

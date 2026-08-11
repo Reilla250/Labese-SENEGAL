@@ -9,6 +9,9 @@ import WeaveDivider from "@/components/ui/WeaveDivider";
 import { iconMap } from "@/lib/icons";
 import { getHomeData, getAdvocacyData, getProgrammesData, getImpactData, getSiteData } from "@/lib/db";
 
+// Always fetch fresh data from Blob - never serve a stale cached page
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata(): Promise<Metadata> {
   const site = await getSiteData();
   return {

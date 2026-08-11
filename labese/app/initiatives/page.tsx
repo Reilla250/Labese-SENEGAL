@@ -6,6 +6,8 @@ import CTASection from "@/components/sections/CTASection";
 import { getInitiativesData } from "@/lib/db";
 import { AlertCircle } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Initiatives",
   description:

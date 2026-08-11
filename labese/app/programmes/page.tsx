@@ -6,6 +6,8 @@ import HealthDisclaimerBanner from "@/components/sections/HealthDisclaimerBanner
 import CTASection from "@/components/sections/CTASection";
 import { getProgrammesData } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Programmes",
   description:

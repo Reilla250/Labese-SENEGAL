@@ -1,6 +1,8 @@
 import { getUploadedImagesAction } from "@/app/actions/admin";
 import ImageLibraryClient from "./ImageLibraryClient";
 
+export const dynamic = "force-dynamic";
+
 export default async function ImagesPage() {
   const images = await getUploadedImagesAction();
 

@@ -175,13 +175,10 @@ export async function uploadImageAction(formData: FormData) {
     };
 
     // Store metadata as JSON in Blob (in /metadata/ folder)
-    const metadataBlob = new Blob([JSON.stringify(metadata, null, 2)], {
-      type: "application/json",
-    });
-    
-    await put(`metadata/${imageId}.json`, metadataBlob, {
+    await put(`metadata/${imageId}.json`, JSON.stringify(metadata, null, 2), {
       access: "public",
       addRandomSuffix: false,
+      allowOverwrite: true,
       contentType: "application/json",
     });
 

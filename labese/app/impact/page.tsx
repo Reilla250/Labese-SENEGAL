@@ -7,6 +7,8 @@ import CTASection from "@/components/sections/CTASection";
 import { getImpactData } from "@/lib/db";
 import { CheckCircle2 } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Our Impact",
   description:

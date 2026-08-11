@@ -7,6 +7,8 @@ import CTASection from "@/components/sections/CTASection";
 import { getAboutData, getAdvocacyData } from "@/lib/db";
 import { iconMap } from "@/lib/icons";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "About Us",
   description:

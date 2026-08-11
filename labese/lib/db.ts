@@ -24,67 +24,62 @@ import {
 } from "@/data/advocacy";
 
 /**
- * Helper functions for using Vercel Blob as a Key-Value store
- * All data is stored as private JSON files in the /data/ folder
+ * Read a JSON file from Vercel Blob.
+ * Uses cache: "no-store" so pages always get fresh data after a save.
  */
 async function readJsonDb<T>(key: string, defaultValue: T): Promise<T> {
-  // If no Blob token configured (e.g., during build), use defaults
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
     return defaultValue;
   }
 
   try {
-    // List blobs to find our data file
-    const { blobs } = await list({ prefix: `data/${key}.json`, limit: 1 });
-    
+    const { blobs } = await list({
+      prefix: `data/${key}.json`,
+      limit: 1,
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+    });
+
     if (blobs.length > 0) {
-      // Fetch the JSON data from the blob URL
-      const response = await fetch(blobs[0].url);
+      // cache: "no-store" ensures we never serve a stale cached copy
+      const response = await fetch(blobs[0].url, { cache: "no-store" });
       if (response.ok) {
-        const data = await response.json();
-        return data as T;
+        return (await response.json()) as T;
       }
     }
-    
-    // If file doesn't exist, return default
+
     return defaultValue;
   } catch (e) {
-    // If any error, return default
-    console.log(`Using default data for ${key}:`, e);
+    console.log(`readJsonDb error for "${key}", using default:`, e);
     return defaultValue;
   }
 }
 
+/**
+ * Write a JSON file to Vercel Blob.
+ * allowOverwrite: true so repeated saves update the same file.
+ */
 async function writeJsonDb<T>(key: string, data: T): Promise<void> {
-  // Check token exists
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   if (!token) {
     throw new Error("BLOB_READ_WRITE_TOKEN environment variable is not set");
   }
 
-  try {
-    const blobPath = `data/${key}.json`;
-    const jsonString = JSON.stringify(data, null, 2);
+  const blobPath = `data/${key}.json`;
+  const jsonString = JSON.stringify(data, null, 2);
 
-    // Use the Vercel Blob SDK
-    const { put } = await import("@vercel/blob");
-    
-    const blob = await put(blobPath, jsonString, {
-      access: "public",
-      addRandomSuffix: false,
-      allowOverwrite: true,
-      contentType: "application/json",
-      token: token,
-    });
-    
-    console.log("Blob created:", blob.url);
-  } catch (error) {
-    console.error("Blob write error:", error);
-    throw error; // Re-throw the original error with full details
-  }
+  const blob = await put(blobPath, jsonString, {
+    access: "public",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    contentType: "application/json",
+    token,
+  });
+
+  console.log(`Blob saved [${key}]:`, blob.url);
 }
 
-// 1. Site Metadata
+// ─── 1. Site Metadata ────────────────────────────────────────────────────────
+
 export async function getSiteData() {
   return readJsonDb("site", defaultSite);
 }
@@ -93,7 +88,8 @@ export async function saveSiteData(data: typeof defaultSite) {
   return writeJsonDb("site", data);
 }
 
-// 2. Programmes
+// ─── 2. Programmes ───────────────────────────────────────────────────────────
+
 export interface ProgrammesDbState {
   programmes: typeof defaultProgrammes;
   programmeIntro: string;
@@ -110,7 +106,8 @@ export async function saveProgrammesData(data: ProgrammesDbState) {
   return writeJsonDb("programmes", data);
 }
 
-// 3. Initiatives
+// ─── 3. Initiatives ──────────────────────────────────────────────────────────
+
 export async function getInitiativesData() {
   return readJsonDb("initiatives", defaultInitiatives);
 }
@@ -119,7 +116,8 @@ export async function saveInitiativesData(data: typeof defaultInitiatives) {
   return writeJsonDb("initiatives", data);
 }
 
-// 4. Impact metrics
+// ─── 4. Impact metrics ───────────────────────────────────────────────────────
+
 export interface ImpactDbState {
   homeImpactStats: typeof defaultHomeImpactStats;
   impactPageStats: typeof defaultImpactPageStats;
@@ -140,7 +138,8 @@ export async function saveImpactData(data: ImpactDbState) {
   return writeJsonDb("impact", data);
 }
 
-// 5. Advocacy
+// ─── 5. Advocacy ─────────────────────────────────────────────────────────────
+
 export interface AdvocacyDbState {
   advocacyPriorities: string[];
   howWeAdvocate: typeof defaultHowWeAdvocate;
@@ -167,7 +166,8 @@ export async function saveAdvocacyData(data: AdvocacyDbState) {
   return writeJsonDb("advocacy", data);
 }
 
-// 6. About Page Content
+// ─── 6. About Page ───────────────────────────────────────────────────────────
+
 export interface AboutDbState {
   storyTitle: string;
   storyImage: string;
@@ -194,7 +194,7 @@ const defaultAboutData: AboutDbState = {
     { label: "People experiencing mental health stigma", icon: "ShieldAlert" },
     { label: "People with disabilities", icon: "Accessibility" },
     { label: "Communities facing poverty, exclusion or barriers to care", icon: "Coins" },
-  ]
+  ],
 };
 
 export async function getAboutData() {
@@ -205,7 +205,8 @@ export async function saveAboutData(data: AboutDbState) {
   return writeJsonDb("about", data);
 }
 
-// 7. Home Page Content
+// ─── 7. Home Page ────────────────────────────────────────────────────────────
+
 export interface HomeDbState {
   heroTitle: string;
   heroSubtitle: string;
