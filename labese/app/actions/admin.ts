@@ -213,22 +213,46 @@ export async function uploadImageAction(formData: FormData) {
 
 // 11. Delete image Action - deletes from TiDB
 export async function deleteImageAction(formData: FormData) {
-  await requireAuth();
-  const imageId = String(formData.get("id") ?? "");
-
   try {
-    // Delete image data from TiDB
-    await db.deleteImageFromDb(imageId);
+    await requireAuth();
+    const imageId = String(formData.get("id") ?? "").trim();
+    const imageUrl = String(formData.get("url") ?? "").trim();
+    const imageName = String(formData.get("name") ?? "").trim();
+    const idFromUrl = imageUrl.match(/\/api\/images\/([^/?#]+)/)?.[1] ?? "";
+    const storageId = imageId || idFromUrl;
 
-    // Remove from index
+    if (!storageId && !imageUrl && !imageName) {
+      return { success: false as const, error: "Missing image identifier." };
+    }
+
+    if (storageId) {
+      await db.deleteImageFromDb(storageId);
+    }
+
     const index = await db.getImageIndex();
-    await db.saveImageIndex(index.filter((img) => img.id !== imageId));
+    const nextIndex = index.filter((img) => {
+      const recordId = img.id ?? "";
+      const recordUrl = img.url ?? "";
+      const recordName = img.name ?? "";
+      const recordIdFromUrl = recordUrl.match(/\/api\/images\/([^/?#]+)/)?.[1] ?? "";
+
+      return !(
+        (storageId && (recordId === storageId || recordIdFromUrl === storageId)) ||
+        (imageUrl && recordUrl === imageUrl) ||
+        (imageName && recordName === imageName)
+      );
+    });
+
+    await db.saveImageIndex(nextIndex);
 
     revalidatePath("/admin/images");
-    return { success: true, error: null };
+    return { success: true as const, error: null };
   } catch (e) {
     console.error("Failed to delete image:", e);
-    return { success: false, error: "Could not delete image." };
+    return {
+      success: false as const,
+      error: e instanceof Error ? e.message : "Could not delete image.",
+    };
   }
 }
 

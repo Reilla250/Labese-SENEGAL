@@ -37,8 +37,30 @@ export default function AboutForm({ initialData }: AboutFormProps) {
   const addServe = () =>
     setForm((prev) => ({ ...prev, whoWeServe: [...prev.whoWeServe, { label: "", icon: "Users2" }] }));
 
-  const removeServe = (idx: number) =>
-    setForm((prev) => ({ ...prev, whoWeServe: prev.whoWeServe.filter((_, i) => i !== idx) }));
+  const removeServe = async (idx: number) => {
+    const previous = form;
+    const next = {
+      ...previous,
+      whoWeServe: previous.whoWeServe.filter((_, i) => i !== idx),
+    };
+    setForm(next);
+    setLoading(true);
+    setMessage(null);
+    try {
+      const res = await saveAboutAction(next);
+      if (res.success) {
+        setMessage({ type: "success", text: "Entry removed and saved." });
+      } else {
+        setForm(previous);
+        setMessage({ type: "error", text: res.error || "Save failed." });
+      }
+    } catch {
+      setForm(previous);
+      setMessage({ type: "error", text: "An error occurred." });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,7 +120,7 @@ export default function AboutForm({ initialData }: AboutFormProps) {
               <input type="text" value={item.label} onChange={(e) => setServe(idx, "label", e.target.value)} className={inputCls} /></div>
             <div><label className="block text-xs font-semibold uppercase tracking-wider text-navy mb-1">Icon</label>
               <input type="text" value={item.icon} onChange={(e) => setServe(idx, "icon", e.target.value)} className="block w-32 rounded-lg border border-line bg-cream/20 px-3 py-2 text-sm text-navy focus:border-forest focus:outline-none" /></div>
-            <button type="button" onClick={() => removeServe(idx)}
+            <button type="button" onClick={() => void removeServe(idx)} disabled={loading}
               className="h-10 w-10 flex items-center justify-center rounded-lg border border-line text-rose-400 hover:bg-rose-50 transition-colors shrink-0">
               <Trash2 size={15} />
             </button>

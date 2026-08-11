@@ -72,7 +72,32 @@ export default function InitiativesForm({ initialData }: { initialData: Initiati
       },
     ]);
 
-  const remove = (idx: number) => setItems((prev) => prev.filter((_, i) => i !== idx));
+  const remove = async (idx: number) => {
+    const previousItems = items;
+    const nextItems = previousItems.filter((_, i) => i !== idx);
+
+    setItems(nextItems);
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      const res = await saveInitiativesAction(nextItems);
+      if (res.success) {
+        setMessage({ type: "success", text: "Initiative removed and saved." });
+      } else {
+        setItems(previousItems);
+        setMessage({ type: "error", text: res.error || "Save failed." });
+      }
+    } catch (error) {
+      setItems(previousItems);
+      setMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : "Error saving.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,7 +146,7 @@ export default function InitiativesForm({ initialData }: { initialData: Initiati
                   <Icon size={14} />
                 </button>
               ))}
-              <button type="button" onClick={() => remove(idx)}
+              <button type="button" onClick={() => void remove(idx)} disabled={loading}
                 className="h-8 w-8 flex items-center justify-center rounded-lg border border-line text-rose-400 hover:bg-rose-50 transition-colors"
                 aria-label="Remove initiative">
                 <Trash2 size={14} />

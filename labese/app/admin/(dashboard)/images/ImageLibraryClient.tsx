@@ -6,7 +6,7 @@ import { Upload, Copy, Trash2, Check, ImageIcon } from "lucide-react";
 import Image from "next/image";
 
 interface ImageFile {
-  id: string;
+  id?: string;
   name: string;
   url: string;
   size: number;
@@ -23,6 +23,7 @@ export default function ImageLibraryClient({ initialImages }: ImageLibraryClient
   const [error, setError] = useState<string | null>(null);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [deletingKey, setDeletingKey] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFiles = async (files: FileList | null) => {
@@ -57,16 +58,27 @@ export default function ImageLibraryClient({ initialImages }: ImageLibraryClient
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleDelete = async (id: string, name: string) => {
+  const imageKey = (img: ImageFile) => img.id || img.url || img.name;
+
+  const handleDelete = async (img: ImageFile) => {
+    const key = imageKey(img);
+    const { id = "", name, url } = img;
     if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+
+    setDeletingKey(key);
+    setError(null);
     const formData = new FormData();
     formData.append("id", id);
+    formData.append("url", url);
+    formData.append("name", name);
+
     const res = await deleteImageAction(formData);
     if (res.success) {
-      setImages((prev) => prev.filter((img) => img.id !== id));
+      setImages((prev) => prev.filter((item) => imageKey(item) !== key));
     } else {
       setError(res.error ?? "Failed to delete image.");
     }
+    setDeletingKey(null);
   };
 
   const copyPath = (url: string) => {
@@ -141,7 +153,7 @@ export default function ImageLibraryClient({ initialImages }: ImageLibraryClient
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {images.map((img) => (
               <div
-                key={img.name}
+                key={imageKey(img)}
                 className="group relative rounded-xl overflow-hidden border border-line bg-white hover:shadow-md hover:shadow-navy/5 transition-all"
               >
                 <div className="relative aspect-square bg-cream/50">
@@ -173,9 +185,10 @@ export default function ImageLibraryClient({ initialImages }: ImageLibraryClient
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDelete(img.id, img.name)}
+                    onClick={() => handleDelete(img)}
+                    disabled={deletingKey === imageKey(img)}
                     title="Delete image"
-                    className="h-9 w-9 rounded-full bg-white flex items-center justify-center text-rose-500 hover:bg-rose-500 hover:text-white transition-colors"
+                    className="h-9 w-9 rounded-full bg-white flex items-center justify-center text-rose-500 hover:bg-rose-500 hover:text-white disabled:opacity-60 transition-colors"
                   >
                     <Trash2 size={15} />
                   </button>

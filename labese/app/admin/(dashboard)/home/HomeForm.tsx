@@ -38,8 +38,29 @@ export default function HomeForm({ initialData }: HomeFormProps) {
   const addImage = () =>
     setForm((prev) => ({ ...prev, images: [...prev.images, { src: "", alt: "" }] }));
 
-  const removeImage = (idx: number) =>
-    setForm((prev) => ({ ...prev, images: prev.images.filter((_, i) => i !== idx) }));
+  const removeImage = async (idx: number) => {
+    const previous = form;
+    const next = { ...previous, images: previous.images.filter((_, i) => i !== idx) };
+    setForm(next);
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      const res = await saveHomeAction(next);
+      if (res.success) {
+        setMessage({ type: "success", text: "Image removed and saved." });
+      } else {
+        setForm(previous);
+        setMessage({ type: "error", text: res.error || "Failed to remove image." });
+      }
+    } catch (err) {
+      setForm(previous);
+      const errorMessage = err instanceof Error ? err.message : "An error occurred.";
+      setMessage({ type: "error", text: errorMessage });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,7 +149,7 @@ export default function HomeForm({ initialData }: HomeFormProps) {
               <input type="text" value={img.alt} onChange={(e) => setImage(idx, "alt", e.target.value)} placeholder="Describe the image"
                 className="block w-full rounded-lg border border-line bg-cream/20 px-3 py-2 text-sm text-navy focus:border-forest focus:outline-none" />
             </div>
-            <button type="button" onClick={() => removeImage(idx)}
+            <button type="button" onClick={() => void removeImage(idx)} disabled={loading}
               className="h-10 w-10 flex items-center justify-center rounded-lg border border-line text-rose-400 hover:bg-rose-50 hover:border-rose-300 transition-colors shrink-0">
               <Trash2 size={15} />
             </button>

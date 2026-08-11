@@ -76,12 +76,36 @@ export default function ProgrammesForm({
     ]);
   };
 
-  const removeProgramme = (idx: number) => {
-    setProgrammes((prev) =>
-      prev
-        .filter((_, i) => i !== idx)
-        .map((programme, i) => ({ ...programme, number: i + 1 }))
-    );
+  const removeProgramme = async (idx: number) => {
+    const previousProgrammes = programmes;
+    const nextProgrammes = previousProgrammes
+      .filter((_, i) => i !== idx)
+      .map((programme, i) => ({ ...programme, number: i + 1 }));
+
+    setProgrammes(nextProgrammes);
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      const res = await saveProgrammesAction({
+        programmes: nextProgrammes,
+        programmeIntro,
+      });
+      if (res.success) {
+        setMessage({ type: "success", text: "Programme removed and saved." });
+      } else {
+        setProgrammes(previousProgrammes);
+        setMessage({ type: "error", text: res.error || "Failed to save programmes." });
+      }
+    } catch (error) {
+      setProgrammes(previousProgrammes);
+      setMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : "An error occurred while saving.",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const move = (idx: number, dir: -1 | 1) => {
@@ -175,7 +199,8 @@ export default function ProgrammesForm({
               </button>
               <button
                 type="button"
-                onClick={() => removeProgramme(idx)}
+                onClick={() => void removeProgramme(idx)}
+                disabled={loading}
                 className="h-8 w-8 flex items-center justify-center rounded-lg border border-line text-rose-400 hover:text-rose-600 hover:border-rose-300 transition-colors"
                 aria-label="Remove programme"
               >
