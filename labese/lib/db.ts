@@ -72,8 +72,9 @@ async function writeJsonDb<T>(key: string, data: T): Promise<void> {
     const blob = await put(blobPath, jsonString, {
       access: "public",
       addRandomSuffix: false,
+      allowOverwrite: true,
       contentType: "application/json",
-      token: token, // Explicitly pass token
+      token: token,
     });
     
     console.log("Blob created:", blob.url);
