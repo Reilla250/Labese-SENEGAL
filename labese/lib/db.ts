@@ -1,9 +1,9 @@
-// Vercel Blob Storage Configuration
-// This project uses Vercel Blob for both images and JSON data storage
+// TiDB Cloud MySQL Database Layer
+// Stores all admin-editable content as key-value rows in a single table
 
-import { put } from "@vercel/blob";
+import mysql from "mysql2/promise";
 
-// Default static values to fall back on if no custom database values exist yet
+// Default static values to fall back on if no data exists yet
 import { site as defaultSite } from "@/data/site";
 import { programmes as defaultProgrammes, programmeIntro as defaultProgrammeIntro } from "@/data/programmes";
 import { initiatives as defaultInitiatives } from "@/data/initiatives";
@@ -23,65 +23,84 @@ import {
   waysToPartner as defaultWaysToPartner,
 } from "@/data/advocacy";
 
-/**
- * The base URL of the Vercel Blob store.
- * We fetch JSON files directly by URL instead of using list(),
- * which avoids burning Advanced Operations on every page load.
- */
-const BLOB_BASE_URL = "https://0xfyk5vg923diks2.public.blob.vercel-storage.com";
+// ─── TiDB Connection ──────────────────────────────────────────────────────────
 
-/**
- * Read a JSON file from Vercel Blob by fetching its URL directly.
- * Uses cache: "no-store" so pages always get fresh data after a save.
- * Uses ZERO Advanced Operations (no list() call).
- */
-async function readJsonDb<T>(key: string, defaultValue: T): Promise<T> {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    return defaultValue;
+function getConnection() {
+  return mysql.createConnection({
+    host: process.env.HOST,
+    port: Number(process.env.PORT) || 4000,
+    user: process.env.USERNAME,
+    password: process.env.PASSWORD,
+    database: process.env.DATABASE,
+    ssl: { rejectUnauthorized: true },
+    connectTimeout: 10000,
+  });
+}
+
+// ─── Bootstrap: Create table if it doesn't exist ─────────────────────────────
+
+async function ensureTable() {
+  const conn = await getConnection();
+  try {
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS labese_data (
+        \`key\` VARCHAR(255) NOT NULL PRIMARY KEY,
+        \`value\` LONGTEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+  } finally {
+    await conn.end();
   }
+}
+
+// ─── Generic read/write helpers ───────────────────────────────────────────────
+
+async function readJsonDb<T>(key: string, defaultValue: T): Promise<T> {
+  // Skip DB during build when env vars aren't available
+  if (!process.env.HOST) return defaultValue;
 
   try {
-    const url = `${BLOB_BASE_URL}/data/${key}.json`;
-    const response = await fetch(url, { cache: "no-store" });
+    await ensureTable();
+    const conn = await getConnection();
+    try {
+      const [rows] = await conn.execute(
+        "SELECT `value` FROM labese_data WHERE `key` = ?",
+        [key]
+      ) as any;
 
-    if (response.ok) {
-      return (await response.json()) as T;
+      if (rows.length > 0) {
+        return JSON.parse(rows[0].value) as T;
+      }
+      return defaultValue;
+    } finally {
+      await conn.end();
     }
-
-    // 404 means file doesn't exist yet - use default silently
-    if (response.status !== 404) {
-      console.log(`readJsonDb [${key}]: HTTP ${response.status}`);
-    }
-
-    return defaultValue;
   } catch (e) {
-    console.log(`readJsonDb error for "${key}", using default:`, e);
+    console.error(`readJsonDb error [${key}]:`, e);
     return defaultValue;
   }
 }
 
-/**
- * Write a JSON file to Vercel Blob.
- * allowOverwrite: true so repeated saves update the same file.
- */
 async function writeJsonDb<T>(key: string, data: T): Promise<void> {
-  const token = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!token) {
-    throw new Error("BLOB_READ_WRITE_TOKEN environment variable is not set");
+  if (!process.env.HOST) {
+    throw new Error("Database not configured");
   }
 
-  const blobPath = `data/${key}.json`;
-  const jsonString = JSON.stringify(data, null, 2);
-
-  const blob = await put(blobPath, jsonString, {
-    access: "public",
-    addRandomSuffix: false,
-    allowOverwrite: true,
-    contentType: "application/json",
-    token,
-  });
-
-  console.log(`Blob saved [${key}]:`, blob.url);
+  await ensureTable();
+  const conn = await getConnection();
+  try {
+    const jsonString = JSON.stringify(data);
+    await conn.execute(
+      `INSERT INTO labese_data (\`key\`, \`value\`)
+       VALUES (?, ?)
+       ON DUPLICATE KEY UPDATE \`value\` = VALUES(\`value\`), updated_at = NOW()`,
+      [key, jsonString]
+    );
+    console.log(`TiDB saved [${key}]`);
+  } finally {
+    await conn.end();
+  }
 }
 
 // ─── 1. Site Metadata ────────────────────────────────────────────────────────
@@ -233,15 +252,15 @@ const defaultHomeData: HomeDbState = {
   images: [
     {
       src: "https://images.unsplash.com/photo-1580537659466-0a9bfa916a54?q=80&w=800&auto=format&fit=crop",
-      alt: "Students in a classroom setting participating in a health education session, illustrative of school-based health awareness work.",
+      alt: "Students in a classroom setting participating in a health education session.",
     },
     {
       src: "https://images.unsplash.com/photo-1531983412531-1f49a365ffed?q=80&w=800&auto=format&fit=crop",
-      alt: "A group of young women in discussion outdoors, illustrative of peer-led community dialogue.",
+      alt: "A group of young women in discussion outdoors.",
     },
     {
       src: "https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?q=80&w=800&auto=format&fit=crop",
-      alt: "Community members gathered for a group meeting, illustrative of community outreach and mobilisation.",
+      alt: "Community members gathered for a group meeting.",
     },
   ],
 };
@@ -252,4 +271,22 @@ export async function getHomeData() {
 
 export async function saveHomeData(data: HomeDbState) {
   return writeJsonDb("home", data);
+}
+
+// ─── 8. Image Index ──────────────────────────────────────────────────────────
+
+export interface ImageRecord {
+  id: string;
+  name: string;
+  url: string;
+  size: number;
+  mtime: number;
+}
+
+export async function getImageIndex(): Promise<ImageRecord[]> {
+  return readJsonDb<ImageRecord[]>("image-index", []);
+}
+
+export async function saveImageIndex(images: ImageRecord[]): Promise<void> {
+  return writeJsonDb("image-index", images);
 }

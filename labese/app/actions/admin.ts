@@ -1,6 +1,6 @@
 "use server";
 
-import { put, del, list } from "@vercel/blob";
+import { put, del } from "@vercel/blob";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { isAuthenticated, setAdminSession, logout } from "@/lib/auth";
@@ -144,30 +144,7 @@ export async function saveAdvocacyAction(data: Parameters<typeof db.saveAdvocacy
   return { success: true };
 }
 
-const BLOB_BASE_URL = "https://0xfyk5vg923diks2.public.blob.vercel-storage.com";
-
-// Helper to read the image index
-async function getImageIndex(): Promise<Array<{ id: string; name: string; url: string; size: number; mtime: number }>> {
-  try {
-    const response = await fetch(`${BLOB_BASE_URL}/data/image-index.json`, { cache: "no-store" });
-    if (response.ok) return await response.json();
-    return [];
-  } catch {
-    return [];
-  }
-}
-
-// Helper to save the image index
-async function saveImageIndex(images: Array<{ id: string; name: string; url: string; size: number; mtime: number }>) {
-  await put("data/image-index.json", JSON.stringify(images, null, 2), {
-    access: "public",
-    addRandomSuffix: false,
-    allowOverwrite: true,
-    contentType: "application/json",
-  });
-}
-
-// 10. Image upload Action with metadata
+// 10. Image upload Action
 export async function uploadImageAction(formData: FormData) {
   await requireAuth();
   const file = formData.get("file") as File;
@@ -179,14 +156,15 @@ export async function uploadImageAction(formData: FormData) {
     const imageId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
     const ext = file.name.split(".").pop() || "jpg";
 
-    // Upload image to Blob
+    // Upload actual image file to Vercel Blob
     const imageBlob = await put(`images/${imageId}.${ext}`, file, {
       access: "public",
       addRandomSuffix: false,
+      allowOverwrite: true,
     });
 
-    // Add to image index
-    const newImage = {
+    // Save image record to TiDB index
+    const newImage: db.ImageRecord = {
       id: imageId,
       name: file.name,
       url: imageBlob.url,
@@ -194,16 +172,12 @@ export async function uploadImageAction(formData: FormData) {
       mtime: Date.now(),
     };
 
-    const index = await getImageIndex();
-    index.unshift(newImage); // newest first
-    await saveImageIndex(index);
+    const index = await db.getImageIndex();
+    index.unshift(newImage);
+    await db.saveImageIndex(index);
 
     revalidatePath("/admin/images");
-    return {
-      success: true,
-      image: newImage,
-      error: null,
-    };
+    return { success: true, image: newImage, error: null };
   } catch (e) {
     console.error("Image upload failed:", e);
     return { success: false, error: "An error occurred during file upload.", image: null };
@@ -217,13 +191,12 @@ export async function deleteImageAction(formData: FormData) {
   const imageId = String(formData.get("id") ?? "");
 
   try {
-    // Delete image from Blob
+    // Delete file from Vercel Blob
     await del(url);
 
-    // Remove from image index
-    const index = await getImageIndex();
-    const updated = index.filter((img) => img.id !== imageId);
-    await saveImageIndex(updated);
+    // Remove from TiDB index
+    const index = await db.getImageIndex();
+    await db.saveImageIndex(index.filter((img) => img.id !== imageId));
 
     revalidatePath("/admin/images");
     return { success: true, error: null };
@@ -237,26 +210,9 @@ export async function deleteImageAction(formData: FormData) {
 export async function getUploadedImagesAction() {
   await requireAuth();
   try {
-    // Fetch the image index JSON directly (no list() = no Advanced Operations)
-    const BLOB_BASE_URL = "https://0xfyk5vg923diks2.public.blob.vercel-storage.com";
-    const response = await fetch(`${BLOB_BASE_URL}/data/image-index.json`, {
-      cache: "no-store",
-    });
-
-    if (response.ok) {
-      const images = await response.json();
-      return images as Array<{
-        id: string;
-        name: string;
-        url: string;
-        size: number;
-        mtime: number;
-      }>;
-    }
-
-    return [];
+    return await db.getImageIndex();
   } catch (e) {
-    console.error("Failed to load image index:", e);
+    console.error("Failed to load images:", e);
     return [];
   }
 }
