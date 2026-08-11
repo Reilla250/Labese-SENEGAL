@@ -1,13 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Tell webpack not to bundle these Node.js-only packages for the browser
+  serverExternalPackages: ["mysql2"],
+
   images: {
     remotePatterns: [
       {
         protocol: "https",
         hostname: "images.unsplash.com",
       },
-      // Vercel Blob storage - allows uploaded images to be served via Next.js Image
       {
         protocol: "https",
         hostname: "*.public.blob.vercel-storage.com",
