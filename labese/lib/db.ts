@@ -56,36 +56,30 @@ async function readJsonDb<T>(key: string, defaultValue: T): Promise<T> {
 }
 
 async function writeJsonDb<T>(key: string, data: T): Promise<void> {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    throw new Error("BLOB_READ_WRITE_TOKEN not configured");
+  // Check token exists
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!token) {
+    throw new Error("BLOB_READ_WRITE_TOKEN environment variable is not set");
   }
 
   try {
     const blobPath = `data/${key}.json`;
     const jsonString = JSON.stringify(data, null, 2);
 
-    console.log("Writing to Blob:", {
-      blobPath,
-      dataSize: jsonString.length,
-      hasBlobToken: !!process.env.BLOB_READ_WRITE_TOKEN,
-    });
-
-    // Pass string directly, not wrapped in Blob object
-    const result = await put(blobPath, jsonString, {
+    // Use the Vercel Blob SDK
+    const { put } = await import("@vercel/blob");
+    
+    const blob = await put(blobPath, jsonString, {
       access: "public",
       addRandomSuffix: false,
       contentType: "application/json",
+      token: token, // Explicitly pass token
     });
     
-    console.log("Successfully wrote to Blob:", { blobPath, url: result.url });
-  } catch (e) {
-    console.error("Failed to write to Blob storage:", e);
-    console.error("Blob error details:", {
-      message: e instanceof Error ? e.message : "Unknown error",
-      name: e instanceof Error ? e.name : undefined,
-      stack: e instanceof Error ? e.stack : undefined,
-    });
-    throw new Error("Database write failed");
+    console.log("Blob created:", blob.url);
+  } catch (error) {
+    console.error("Blob write error:", error);
+    throw error; // Re-throw the original error with full details
   }
 }
 
