@@ -72,9 +72,6 @@ async function ensureTable() {
   } finally {
     await conn.end();
   }
-}  } finally {
-    await conn.end();
-  }
 }
 
 // ─── Generic read/write helpers ───────────────────────────────────────────────
