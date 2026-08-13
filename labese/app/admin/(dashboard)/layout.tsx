@@ -76,7 +76,7 @@ export default async function AdminLayout({
 
         <div className="p-4 border-t border-white/5 flex flex-col gap-2">
           <Link
-            href="https://mail.larksuite.com/"
+            href="https://www.larksuite.com/"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-between px-4 py-2.5 rounded-lg text-xs font-semibold text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 transition-colors"
@@ -116,7 +116,7 @@ export default async function AdminLayout({
           </span>
           <div className="flex items-center gap-4">
             <Link
-              href="https://mail.larksuite.com/"
+              href="https://www.larksuite.com/"
               target="_blank"
               rel="noopener noreferrer"
               className="text-sky-300 hover:text-sky-100"
