@@ -12,6 +12,7 @@ import {
   Image as ImageIcon,
   LogOut,
   ExternalLink,
+  Mail,
 } from "lucide-react";
 
 export default async function AdminLayout({
@@ -75,6 +76,18 @@ export default async function AdminLayout({
 
         <div className="p-4 border-t border-white/5 flex flex-col gap-2">
           <Link
+            href="https://mail.larksuite.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-between px-4 py-2.5 rounded-lg text-xs font-semibold text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 transition-colors"
+          >
+            <span className="flex items-center gap-2">
+              <Mail size={14} />
+              Business Email
+            </span>
+            <ExternalLink size={12} />
+          </Link>
+          <Link
             href="/"
             target="_blank"
             className="flex items-center justify-between px-4 py-2.5 rounded-lg text-xs font-semibold text-sand bg-white/5 hover:bg-white/10 transition-colors"
@@ -102,6 +115,15 @@ export default async function AdminLayout({
             LABESE Admin
           </span>
           <div className="flex items-center gap-4">
+            <Link
+              href="https://mail.larksuite.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sky-300 hover:text-sky-100"
+              title="Business Email"
+            >
+              <Mail size={18} />
+            </Link>
             <Link href="/" target="_blank" className="text-sand">
               <ExternalLink size={18} />
             </Link>
