@@ -1,6 +1,0 @@
-{
-  "buildCommand": "cd labese && npm install && npm run build",
-  "outputDirectory": "labese/.next",
-  "installCommand": "cd labese && npm install",
-  "framework": "nextjs"
-}
