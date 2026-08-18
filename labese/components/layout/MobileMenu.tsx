@@ -4,6 +4,7 @@ import Link from "next/link";
 import { X } from "lucide-react";
 import { mainNav } from "@/data/site";
 import { useEffect, useRef } from "react";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 type Props = {
   open: boolean;
@@ -79,13 +80,8 @@ export default function MobileMenu({ open, onClose, site }: Props) {
           </button>
         </div>
 
-        <div className="px-6 pb-5">
-          <div className="rounded-[28px] border border-navy/10 bg-slate-100/90 p-4 text-sm text-slate-700 shadow-sm">
-            <p className="font-semibold text-navy">Open the menu to see all pages</p>
-            <p className="mt-2 text-sm text-slate-600">
-              Tap any item below to navigate directly to that section of the site.
-            </p>
-          </div>
+        <div className="px-6 pt-4 pb-2">
+          <LanguageSwitcher variant="mobile" />
         </div>
 
         <nav aria-label="Mobile" className="flex-1 overflow-y-auto px-6 py-4">

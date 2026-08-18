@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { mainNav } from "@/data/site";
 import MobileMenu from "./MobileMenu";
+import LanguageSwitcher from "./LanguageSwitcher";
 import { Menu } from "lucide-react";
 
 interface HeaderProps {
@@ -68,7 +69,8 @@ export default function Header({ site }: HeaderProps) {
           })}
         </nav>
 
-        <div className="hidden lg:block">
+        <div className="hidden lg:flex items-center gap-3">
+          <LanguageSwitcher variant="desktop" />
           <Link
             href="/get-involved"
             className="inline-flex items-center rounded-md bg-forest px-4 py-2.5 text-sm font-semibold text-white hover:bg-forest-dark transition-colors"
@@ -77,16 +79,19 @@ export default function Header({ site }: HeaderProps) {
           </Link>
         </div>
 
-        <button
-          type="button"
-          className="lg:hidden inline-flex h-11 w-11 items-center justify-center rounded-full border border-navy/15 bg-white/95 text-navy shadow-sm shadow-navy/5 transition hover:bg-forest/10 focus-visible:outline-2 focus-visible:outline-sand"
-          aria-expanded={menuOpen}
-          aria-controls="mobile-menu"
-          aria-label="Open menu"
-          onClick={() => setMenuOpen(true)}
-        >
-          <Menu size={22} aria-hidden="true" />
-        </button>
+        <div className="flex lg:hidden items-center gap-2">
+          <LanguageSwitcher variant="desktop" />
+          <button
+            type="button"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-navy/15 bg-white/95 text-navy shadow-sm shadow-navy/5 transition hover:bg-forest/10 focus-visible:outline-2 focus-visible:outline-sand"
+            aria-expanded={menuOpen}
+            aria-controls="mobile-menu"
+            aria-label="Open menu"
+            onClick={() => setMenuOpen(true)}
+          >
+            <Menu size={22} aria-hidden="true" />
+          </button>
+        </div>
       </div>
 
       <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} site={site} />

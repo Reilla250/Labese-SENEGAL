@@ -10,6 +10,7 @@ import "@fontsource/ibm-plex-mono/600.css";
 import "./globals.css";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import GoogleTranslateScript from "@/components/layout/GoogleTranslateScript";
 import { getSiteData } from "@/lib/db";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -73,6 +74,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           {children}
         </main>
         <Footer site={site} />
+        <GoogleTranslateScript />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
