@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Globe } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { Globe, Check, ChevronDown } from "lucide-react";
 
 type Language = "en" | "fr";
 
@@ -12,6 +12,8 @@ interface LanguageSwitcherProps {
 export default function LanguageSwitcher({ variant = "desktop" }: LanguageSwitcherProps) {
   const [currentLang, setCurrentLang] = useState<Language>("en");
   const [mounted, setMounted] = useState(false);
+  const [open, setOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -32,7 +34,19 @@ export default function LanguageSwitcher({ variant = "desktop" }: LanguageSwitch
     setCurrentLang(getLangFromCookie());
   }, []);
 
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const changeLanguage = (lang: Language) => {
+    setOpen(false);
     if (lang === currentLang && mounted) return;
 
     setCurrentLang(lang);
@@ -41,100 +55,96 @@ export default function LanguageSwitcher({ variant = "desktop" }: LanguageSwitch
     const domain = window.location.hostname;
     const cookieVal = lang === "fr" ? "/en/fr" : "/en/en";
 
-    // Set cookie on hostname and default domain path
     document.cookie = `googtrans=${cookieVal};path=/;domain=${domain}`;
     document.cookie = `googtrans=${cookieVal};path=/`;
 
-    // Interact with Google Translate select element if ready
     const selectElem = document.querySelector(".goog-te-combo") as HTMLSelectElement | null;
     if (selectElem) {
       selectElem.value = lang;
       selectElem.dispatchEvent(new Event("change"));
     }
 
-    // Refresh page to guarantee DOM-wide translation state update
     window.location.reload();
   };
 
   if (!mounted) {
     return (
-      <div className={`inline-flex items-center gap-1.5 rounded-full border border-navy/15 bg-white/95 px-3 py-1.5 text-xs font-semibold text-navy shadow-xs ${variant === 'mobile' ? 'w-full justify-between p-3' : ''}`}>
-        <div className="flex items-center gap-1.5">
-          <Globe size={14} className="text-forest" />
-          <span>EN / FR</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (variant === "mobile") {
-    return (
-      <div className="flex items-center justify-between rounded-2xl border border-navy/10 bg-slate-100/90 p-3">
-        <div className="flex items-center gap-2 text-sm font-semibold text-navy">
+      <div className="relative inline-block text-left">
+        <button
+          type="button"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-navy/15 bg-white/90 text-navy shadow-xs"
+          aria-label="Select Language"
+        >
           <Globe size={18} className="text-forest" />
-          <span>Language / Langue</span>
-        </div>
-        <div className="flex items-center gap-1 rounded-xl bg-white p-1 shadow-sm border border-navy/10">
-          <button
-            type="button"
-            onClick={() => changeLanguage("en")}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
-              currentLang === "en"
-                ? "bg-forest text-white shadow-xs"
-                : "text-navy/70 hover:text-forest hover:bg-forest-light"
-            }`}
-          >
-            <span role="img" aria-label="English">🇬🇧</span>
-            <span>EN</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => changeLanguage("fr")}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
-              currentLang === "fr"
-                ? "bg-forest text-white shadow-xs"
-                : "text-navy/70 hover:text-forest hover:bg-forest-light"
-            }`}
-          >
-            <span role="img" aria-label="Français">🇫🇷</span>
-            <span>FR</span>
-          </button>
-        </div>
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="inline-flex items-center gap-1 rounded-full border border-navy/15 bg-white/90 p-1 text-xs font-medium text-navy shadow-xs backdrop-blur">
-      <div className="flex items-center pl-1.5 pr-0.5 text-forest">
-        <Globe size={14} aria-hidden="true" />
-      </div>
+    <div
+      ref={dropdownRef}
+      className="relative inline-block text-left"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
       <button
         type="button"
-        onClick={() => changeLanguage("en")}
-        aria-label="Switch language to English"
-        className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold transition-all ${
-          currentLang === "en"
-            ? "bg-forest text-white shadow-xs"
-            : "text-navy/70 hover:text-forest hover:bg-forest-light/60"
-        }`}
+        onClick={() => setOpen(!open)}
+        className="inline-flex h-9 items-center gap-1.5 rounded-full border border-navy/15 bg-white/95 px-2.5 py-1 text-xs font-semibold text-navy shadow-xs transition hover:border-forest/40 hover:bg-forest-light/50 focus-visible:outline-2 focus-visible:outline-sand"
+        aria-expanded={open}
+        aria-haspopup="true"
+        aria-label="Select website language"
       >
-        <span role="img" aria-label="English">🇬🇧</span>
-        <span>EN</span>
+        <Globe size={16} className="text-forest" />
+        <span className="uppercase text-[11px] font-mono-stat font-bold tracking-wider">
+          {currentLang}
+        </span>
+        <ChevronDown size={12} className={`text-navy/50 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </button>
-      <button
-        type="button"
-        onClick={() => changeLanguage("fr")}
-        aria-label="Changer la langue en Français"
-        className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold transition-all ${
-          currentLang === "fr"
-            ? "bg-forest text-white shadow-xs"
-            : "text-navy/70 hover:text-forest hover:bg-forest-light/60"
-        }`}
-      >
-        <span role="img" aria-label="Français">🇫🇷</span>
-        <span>FR</span>
-      </button>
+
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full mt-1.5 w-36 origin-top-right rounded-xl border border-navy/10 bg-white p-1.5 shadow-lg shadow-navy/10 ring-1 ring-black/5 z-50 animate-fade-in"
+        >
+          <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            Language / Langue
+          </div>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => changeLanguage("en")}
+            className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-xs font-semibold transition-colors ${
+              currentLang === "en"
+                ? "bg-forest-light text-forest font-bold"
+                : "text-navy hover:bg-slate-50"
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <span role="img" aria-label="English">🇬🇧</span>
+              <span>English</span>
+            </span>
+            {currentLang === "en" && <Check size={14} className="text-forest" />}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => changeLanguage("fr")}
+            className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-xs font-semibold transition-colors ${
+              currentLang === "fr"
+                ? "bg-forest-light text-forest font-bold"
+                : "text-navy hover:bg-slate-50"
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <span role="img" aria-label="Français">🇫🇷</span>
+              <span>Français</span>
+            </span>
+            {currentLang === "fr" && <Check size={14} className="text-forest" />}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
