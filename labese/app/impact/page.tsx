@@ -65,7 +65,7 @@ export default async function ImpactPage() {
         text="Partner with LABESE to expand programmes that are already showing measurable results."
         buttons={[
           { label: "Partner with Us to Expand the Impact", href: "/get-involved" },
-          { label: "Read About Our Initiatives", href: "/initiatives", variant: "secondary" },
+          { label: "Contact Us", href: "/contact", variant: "secondary" },
         ]}
       />
     </>

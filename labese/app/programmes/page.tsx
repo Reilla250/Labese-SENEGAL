@@ -60,11 +60,11 @@ export default async function ProgrammesPage() {
       </section>
 
       <CTASection
-        headline="See these programmes translated into documented and proposed initiatives."
-        text="Our Initiatives page separates what has been implemented from what is proposed or under review."
+        headline="Partner with LABESE to expand community health impact."
+        text="Learn how your support, funding or technical collaboration can extend health awareness, dignity and action across Senegal."
         buttons={[
-          { label: "View Our Initiatives", href: "/initiatives" },
-          { label: "Partner with LABESE", href: "/get-involved", variant: "secondary" },
+          { label: "Partner with LABESE", href: "/get-involved" },
+          { label: "Contact Us", href: "/contact", variant: "secondary" },
         ]}
       />
     </>

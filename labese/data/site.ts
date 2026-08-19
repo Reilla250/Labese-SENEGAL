@@ -23,7 +23,6 @@ export const mainNav: NavItem[] = [
   { label: "Home", href: "/" },
   { label: "About Us", href: "/about" },
   { label: "Programmes", href: "/programmes" },
-  { label: "Initiatives", href: "/initiatives" },
   { label: "Impact", href: "/impact" },
   { label: "Advocacy", href: "/advocacy" },
   { label: "Partners", href: "/partners" },
@@ -34,7 +33,6 @@ export const mainNav: NavItem[] = [
 export const footerExplore: NavItem[] = [
   { label: "About Us", href: "/about" },
   { label: "Programmes", href: "/programmes" },
-  { label: "Initiatives", href: "/initiatives" },
   { label: "Impact", href: "/impact" },
   { label: "Advocacy", href: "/advocacy" },
 ];

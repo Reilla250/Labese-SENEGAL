@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { getSiteData, getProgrammesData, getInitiativesData } from "@/lib/db";
+import { getSiteData, getProgrammesData } from "@/lib/db";
 import { getUploadedImagesAction } from "@/app/actions/admin";
 import {
   Briefcase,
-  TrendingUp,
   Image as ImageIcon,
   Settings,
   Home,
@@ -14,7 +13,6 @@ import {
 export default async function AdminDashboardPage() {
   const site = await getSiteData();
   const { programmes } = await getProgrammesData();
-  const initiatives = await getInitiativesData();
   const images = await getUploadedImagesAction();
 
   const cards = [
@@ -25,14 +23,6 @@ export default async function AdminDashboardPage() {
       icon: Briefcase,
       color: "bg-forest-light text-forest-dark border-forest/15",
       href: "/admin/programmes",
-    },
-    {
-      title: "Initiatives",
-      description: "Proposed and completed school-based projects.",
-      count: initiatives.length,
-      icon: TrendingUp,
-      color: "bg-amber-50 text-amber-700 border-amber-500/10",
-      href: "/admin/initiatives",
     },
     {
       title: "Media Uploads",

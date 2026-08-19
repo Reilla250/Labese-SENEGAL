@@ -7,8 +7,6 @@ import {
   Home,
   FileText,
   Briefcase,
-  TrendingUp,
-  Scale,
   Image as ImageIcon,
   LogOut,
   ExternalLink,
@@ -37,9 +35,6 @@ export default async function AdminLayout({
     { href: "/admin/home", label: "Home Page", icon: Home },
     { href: "/admin/about", label: "About Page", icon: FileText },
     { href: "/admin/programmes", label: "Programmes", icon: Briefcase },
-    { href: "/admin/initiatives", label: "Initiatives", icon: TrendingUp },
-    { href: "/admin/impact", label: "Impact Metrics", icon: TrendingUp },
-    { href: "/admin/advocacy", label: "Advocacy Lists", icon: Scale },
     { href: "/admin/images", label: "Image Library", icon: ImageIcon },
   ];
 

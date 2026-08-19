@@ -5,7 +5,6 @@ const routes = [
   "",
   "about",
   "programmes",
-  "initiatives",
   "impact",
   "advocacy",
   "partners",
